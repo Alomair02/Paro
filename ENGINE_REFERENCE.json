@@ -1,0 +1,201 @@
+{
+  "_meta": {
+    "purpose": "Canonical OOXML/PPTX constants for the slide engine. This is the single source of truth for namespaces, content types, relationship types, placeholder coordinates, and unit factors. Look up values here instead of guessing from memory or reading sample .pptx files. Per-deck data (theme colors, slide content) does NOT belong here.",
+    "version": "1.0",
+    "do_not": "Do not open, unzip, or read local .pptx files to derive any value. Every constant the engine needs is in this file. If something is genuinely missing, add it here deliberately rather than reverse-engineering it elsewhere."
+  },
+
+  "namespaces": {
+    "a":  "http://schemas.openxmlformats.org/drawingml/2006/main",
+    "p":  "http://schemas.openxmlformats.org/presentationml/2006/main",
+    "r":  "http://schemas.openxmlformats.org/officeDocument/2006/relationships",
+    "mc": "http://schemas.openxmlformats.org/markup-compatibility/2006",
+    "ct": "http://schemas.openxmlformats.org/package/2006/content-types",
+    "rel_pkg": "http://schemas.openxmlformats.org/package/2006/relationships",
+    "p14": "http://schemas.microsoft.com/office/powerpoint/2010/main",
+    "p15": "http://schemas.microsoft.com/office/powerpoint/2012/main"
+  },
+
+  "content_types": {
+    "_note": "Exact, case-sensitive. Override strings for named parts; defaults for extensions.",
+    "defaults": {
+      "rels": "application/vnd.openxmlformats-package.relationships+xml",
+      "xml":  "application/xml",
+      "png":  "image/png",
+      "jpeg": "image/jpeg",
+      "jpg":  "image/jpeg",
+      "gif":  "image/gif",
+      "bmp":  "image/bmp",
+      "tiff": "image/tiff",
+      "emf":  "image/x-emf",
+      "wmf":  "image/x-wmf"
+    },
+    "overrides": {
+      "presentation":  "application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml",
+      "slideshow":     "application/vnd.openxmlformats-officedocument.presentationml.slideshow.main+xml",
+      "template":      "application/vnd.openxmlformats-officedocument.presentationml.template.main+xml",
+      "slide":         "application/vnd.openxmlformats-officedocument.presentationml.slide+xml",
+      "slideLayout":   "application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml",
+      "slideMaster":   "application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml",
+      "notesSlide":    "application/vnd.openxmlformats-officedocument.presentationml.notesSlide+xml",
+      "notesMaster":   "application/vnd.openxmlformats-officedocument.presentationml.notesMaster+xml",
+      "handoutMaster": "application/vnd.openxmlformats-officedocument.presentationml.handoutMaster+xml",
+      "presProps":     "application/vnd.openxmlformats-officedocument.presentationml.presProps+xml",
+      "viewProps":     "application/vnd.openxmlformats-officedocument.presentationml.viewProps+xml",
+      "tableStyles":   "application/vnd.openxmlformats-officedocument.presentationml.tableStyles+xml",
+      "theme":         "application/vnd.openxmlformats-officedocument.theme+xml",
+      "coreProps":     "application/vnd.openxmlformats-package.core-properties+xml",
+      "appProps":      "application/vnd.openxmlformats-officedocument.extended-properties+xml"
+    }
+  },
+
+  "relationship_types": {
+    "_note": "Exact URIs. Base for office relationships is .../officeDocument/2006/relationships/. Core props uses a different base. Scheme is http, not https.",
+    "officeDocument": "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument",
+    "slide":          "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide",
+    "slideLayout":    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout",
+    "slideMaster":    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster",
+    "notesSlide":     "http://schemas.openxmlformats.org/officeDocument/2006/relationships/notesSlide",
+    "notesMaster":    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/notesMaster",
+    "theme":          "http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme",
+    "image":          "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image",
+    "hyperlink":      "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink",
+    "presProps":      "http://schemas.openxmlformats.org/officeDocument/2006/relationships/presProps",
+    "viewProps":      "http://schemas.openxmlformats.org/officeDocument/2006/relationships/viewProps",
+    "tableStyles":    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/tableStyles",
+    "video":          "http://schemas.openxmlformats.org/officeDocument/2006/relationships/video",
+    "audio":          "http://schemas.openxmlformats.org/officeDocument/2006/relationships/audio",
+    "coreProperties": "http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties",
+    "extendedProperties": "http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties",
+    "media_ms":       "http://schemas.microsoft.com/office/2007/relationships/media"
+  },
+
+  "units": {
+    "_note": "EMU is the base integer unit. All measurements in OOXML are EMU integers. Font sizes are hundredths of a point (sz). Rotation is 60000ths of a degree.",
+    "emu_per": {
+      "inch": 914400,
+      "cm": 360000,
+      "mm": 36000,
+      "pt": 12700,
+      "pica": 152400,
+      "pixel_96dpi": 9525,
+      "emu": 1,
+      "twip": 635
+    },
+    "font_size_factor": 100,
+    "rotation_per_degree": 60000
+  },
+
+  "slide_sizes": {
+    "_note": "cx by cy in EMU. type attribute goes on p:sldSz.",
+    "16:9":  { "cx": 12192000, "cy": 6858000, "type": "screen16x9" },
+    "4:3":   { "cx": 9144000,  "cy": 6858000, "type": "screen4x3" },
+    "16:10": { "cx": 12192000, "cy": 7620000, "type": "screen16x10" },
+    "a4":    { "cx": 9906000,  "cy": 6858000, "type": "custom" }
+  },
+
+  "notes_size": {
+    "_note": "Standard notes page size in EMU (portrait letter-ish).",
+    "cx": 6858000,
+    "cy": 9144000
+  },
+
+  "color_scheme_slots": {
+    "_note": "The 12 clrScheme child elements in their required order. dk1 and lt1 wrap a:sysClr (windowText / window with lastClr). All others wrap a:srgbClr.",
+    "order": ["dk1", "lt1", "dk2", "lt2", "accent1", "accent2", "accent3", "accent4", "accent5", "accent6", "hlink", "folHlink"],
+    "sysclr_slots": {
+      "dk1": "windowText",
+      "lt1": "window"
+    }
+  },
+
+  "color_map_default": {
+    "_note": "Default p:clrMap on the slide master. Maps logical names to scheme slots.",
+    "bg1": "lt1",
+    "tx1": "dk1",
+    "bg2": "lt2",
+    "tx2": "dk2",
+    "accent1": "accent1",
+    "accent2": "accent2",
+    "accent3": "accent3",
+    "accent4": "accent4",
+    "accent5": "accent5",
+    "accent6": "accent6",
+    "hlink": "hlink",
+    "folHlink": "folHlink"
+  },
+
+  "placeholder_coordinates_16x9": {
+    "_note": "Canonical PowerPoint 16:9 (12192000 x 6858000 EMU) placeholder defaults. off = top-left, ext = width/height. These are authoritative — do not derive from sample files. Engine may define its own layouts; these are sensible defaults.",
+    "title": {
+      "layout_type": "title",
+      "placeholders": [
+        { "idx": 0, "type": "ctrTitle", "off": { "x": 1524000, "y": 1122363 }, "ext": { "cx": 9144000, "cy": 2387600 } },
+        { "idx": 1, "type": "subTitle", "off": { "x": 1524000, "y": 3602182 }, "ext": { "cx": 9144000, "cy": 1655536 } }
+      ]
+    },
+    "titleBody": {
+      "layout_type": "obj",
+      "placeholders": [
+        { "idx": 0, "type": "title", "off": { "x": 838200, "y": 365125 }, "ext": { "cx": 10515600, "cy": 1325563 } },
+        { "idx": 1, "type": "body",  "off": { "x": 838200, "y": 1825625 }, "ext": { "cx": 10515600, "cy": 4351338 } }
+      ]
+    },
+    "titleOnly": {
+      "layout_type": "titleOnly",
+      "placeholders": [
+        { "idx": 0, "type": "title", "off": { "x": 838200, "y": 365125 }, "ext": { "cx": 10515600, "cy": 1325563 } }
+      ]
+    },
+    "twoContent": {
+      "layout_type": "twoObj",
+      "placeholders": [
+        { "idx": 0, "type": "title", "off": { "x": 838200, "y": 365125 },  "ext": { "cx": 10515600, "cy": 1325563 } },
+        { "idx": 1, "type": "body",  "off": { "x": 838200, "y": 1825625 }, "ext": { "cx": 5114925,  "cy": 4351338 } },
+        { "idx": 2, "type": "body",  "off": { "x": 6238875, "y": 1825625 }, "ext": { "cx": 5114925,  "cy": 4351338 } }
+      ]
+    },
+    "blank": {
+      "layout_type": "blank",
+      "placeholders": []
+    }
+  },
+
+  "placeholder_types": {
+    "_note": "Valid p:ph type attribute values. idx default 0 = title. Empty type attribute means body/object.",
+    "values": ["title", "ctrTitle", "subTitle", "body", "pic", "tbl", "chart", "clipArt", "dgm", "media", "dt", "ftr", "sldNum", "hdr"]
+  },
+
+  "package_layout": {
+    "_note": "Canonical part paths. {N} is a 1-based index.",
+    "content_types": "[Content_Types].xml",
+    "package_rels": "_rels/.rels",
+    "presentation": "ppt/presentation.xml",
+    "presentation_rels": "ppt/_rels/presentation.xml.rels",
+    "presProps": "ppt/presProps.xml",
+    "viewProps": "ppt/viewProps.xml",
+    "tableStyles": "ppt/tableStyles.xml",
+    "theme": "ppt/theme/theme{N}.xml",
+    "slideMaster": "ppt/slideMasters/slideMaster{N}.xml",
+    "slideMaster_rels": "ppt/slideMasters/_rels/slideMaster{N}.xml.rels",
+    "slideLayout": "ppt/slideLayouts/slideLayout{N}.xml",
+    "slideLayout_rels": "ppt/slideLayouts/_rels/slideLayout{N}.xml.rels",
+    "slide": "ppt/slides/slide{N}.xml",
+    "slide_rels": "ppt/slides/_rels/slide{N}.xml.rels",
+    "media": "ppt/media/image{N}.{ext}",
+    "core_props": "docProps/core.xml",
+    "app_props": "docProps/app.xml"
+  },
+
+  "constraints": {
+    "_note": "Hard rules that cause silent corruption if violated.",
+    "slide_id_minimum": 256,
+    "shape_id_start": 2,
+    "shape_id_group_tree": 1,
+    "fmtScheme_lists_must_be_nonempty": ["fillStyleLst", "lnStyleLst", "effectStyleLst", "bgFillStyleLst"],
+    "content_types_written_last": true,
+    "rels_target_is_source_relative": true,
+    "rid_unique_per_source_part": true,
+    "clrMapOvr_required_on_slide": true
+  }
+}
