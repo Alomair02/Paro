@@ -1,0 +1,76 @@
+<deck theme="cleanDemo" size="16:9">
+  <theme name="cleanDemo"
+         dk1="#111827" lt1="#FFFFFF" dk2="#374151" lt2="#F3F4F6"
+         accent1="#2563EB" accent2="#F97316" accent3="#16A34A"
+         accent4="#7C3AED" accent5="#0E7490" accent6="#DC2626"
+         hlink="#1D4ED8" folHlink="#6D28D9"
+         heading="Aptos Display" body="Aptos"/>
+
+  <slide layout="title">
+    <text placeholder="title" role="title">Semantic Type Scale</text>
+    <text placeholder="subtitle" role="subheading">Text names its role; the theme owns the hierarchy</text>
+  </slide>
+
+  <slide layout="titleBody">
+    <text placeholder="title" role="title">Body Placeholder List</text>
+    <text placeholder="body" role="body" list="bullet">
+      <p role="body">Body copy uses the theme scale instead of ad hoc point sizes.</p>
+      <p role="body" level="1">Nested bullet indentation is explicit, but type size is semantic.</p>
+      <p role="body" bullet="number">Numbered list markers keep the same body role.</p>
+    </text>
+  </slide>
+
+  <slide layout="titleBody" flow="free">
+    <text placeholder="title" role="title">Three-Panel Grid</text>
+    <grid x="0.75in" y="1.65in" w="11.75in" h="4.45in" cols="3" rows="1" gap="0.25in">
+      <stack col="1" fill="lt2" line="accent1" radius="6pt" pad="0.18in" gap="0.08in">
+        <text role="heading" color="accent1">Discover</text>
+        <text role="body" list="bullet">
+          <p role="body">Map the current workflow.</p>
+          <p role="body">Identify decision owners.</p>
+        </text>
+        <text role="caption" color="dk2">Source: workshop notes</text>
+      </stack>
+      <stack col="2" fill="lt2" line="accent2" radius="6pt" pad="0.18in" gap="0.08in">
+        <text role="heading" color="accent2">Build</text>
+        <text role="body" list="bullet">
+          <p role="body">Prototype the core path.</p>
+          <p role="body">Validate with real users.</p>
+        </text>
+        <text role="caption" color="dk2">Source: sprint plan</text>
+      </stack>
+      <stack col="3" fill="lt2" line="accent3" radius="6pt" pad="0.18in" gap="0.08in">
+        <text role="heading" color="accent3">Launch</text>
+        <text role="body" list="bullet">
+          <p role="body">Prepare enablement assets.</p>
+          <p role="body">Monitor adoption signals.</p>
+        </text>
+        <text role="caption" color="dk2">Source: rollout checklist</text>
+      </stack>
+    </grid>
+  </slide>
+
+  <slide layout="titleBody" flow="free">
+    <text placeholder="title" role="title">Timeline and Callout</text>
+    <timeline x="0.85in" y="1.85in" w="8.5in" h="3.55in"
+              periods="4" labels="Q1,Q2,Q3,Q4">
+      <task label="Plan" start="1" span="1" fill="accent2"/>
+      <task label="Build" start="2" span="2" fill="accent1"/>
+      <task label="Launch" start="4" span="1" fill="accent3"/>
+      <milestone label="Steering review" at="2"/>
+      <milestone label="Go-live" at="4"/>
+    </timeline>
+    <shape x="10in" y="2.25in" w="2.1in" h="1.55in"
+           geom="roundRect" fill="accent1" line="none">
+      <text role="body" color="lt1" align="ctr">
+        <p role="body"><run size="36pt">3</run></p>
+        <p role="caption">decision points</p>
+      </text>
+    </shape>
+    <line x1="10in" y1="4.25in" x2="12.1in" y2="4.25in"
+          color="accent2" width="2pt" dash="dash" cap="round"/>
+    <text x="10in" y="4.55in" w="2.1in" h="0.7in" role="caption" align="ctr">
+      Connector and callout text still use semantic roles.
+    </text>
+  </slide>
+</deck>

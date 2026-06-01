@@ -11,7 +11,9 @@ from builders.shape_emitters import (
     SlideState,
     emit_autoshape,
     emit_image,
+    emit_line,
     emit_placeholder_text,
+    emit_table,
     emit_text_box,
 )
 from builders.slide_builder import SlideBuilder
@@ -146,6 +148,162 @@ class ShapeEmitterTests(unittest.TestCase):
         )
         self.assertIsNotNone(shape.find("p:spPr/a:ln/a:noFill", NSMAP))
         self.assertEqual(shape.find(".//a:t", NSMAP).text, "Accent")
+
+    def test_autoshape_fill_none_emits_no_fill(self):
+        state = SlideState("ppt/slides/slide1.xml")
+
+        shape = emit_autoshape(
+            {
+                "x": "1in",
+                "y": "1in",
+                "w": "2in",
+                "h": "1in",
+                "fill": "none",
+                "line": {"color": "accent1", "width": "1pt"},
+            },
+            state,
+        )
+
+        self.assertIsNotNone(shape.find("p:spPr/a:noFill", NSMAP))
+        self.assertIsNone(shape.find("p:spPr/a:solidFill", NSMAP))
+
+    def test_text_box_emits_bullets_numbering_underline_and_hyperlink(self):
+        state = SlideState("ppt/slides/slide1.xml")
+        relationships = RelationshipRegistry()
+
+        shape = emit_text_box(
+            {
+                "x": "1in",
+                "y": "1in",
+                "w": "4in",
+                "h": "2in",
+                "paragraphs": [
+                    {"level": 1, "bullet": "bullet", "runs": [{"text": "Bullet"}]},
+                    {"bullet": "number", "runs": [{"text": "Number"}]},
+                    {
+                        "bullet": "none",
+                        "runs": [
+                            {
+                                "text": "Linked",
+                                "underline": True,
+                                "link": "https://example.com/?a=1&b=2",
+                            }
+                        ],
+                    },
+                ],
+            },
+            state,
+            relationships,
+        )
+
+        paragraphs = shape.findall("p:txBody/a:p", NSMAP)
+        bullet = paragraphs[0].find("a:pPr/a:buChar", NSMAP)
+        numbering = paragraphs[1].find("a:pPr/a:buAutoNum", NSMAP)
+        no_bullet = paragraphs[2].find("a:pPr/a:buNone", NSMAP)
+        self.assertEqual(bullet.get("char"), REFERENCE["text_defaults"]["list_markers"]["bullet"])
+        self.assertEqual(numbering.get("type"), REFERENCE["text_defaults"]["numbering_type"])
+        self.assertIsNotNone(no_bullet)
+        self.assertEqual(
+            paragraphs[0].find("a:pPr", NSMAP).get("marL"),
+            str(REFERENCE["text_defaults"]["level_indents"][1]["marL"]),
+        )
+        rpr = paragraphs[2].find("a:r/a:rPr", NSMAP)
+        self.assertEqual(rpr.get("u"), "sng")
+        self.assertEqual(rpr.find("a:hlinkClick", NSMAP).get(qn("r", "id")), "rId1")
+
+        rel = rels_for(relationships, "ppt/slides/slide1.xml")[0]
+        self.assertEqual(rel.get("Type"), RelationshipRegistry.HYPERLINK)
+        self.assertEqual(rel.get("Target"), "https://example.com/?a=1&b=2")
+        self.assertEqual(rel.get("TargetMode"), "External")
+
+    def test_text_box_emits_paragraph_spacing_from_role_resolution(self):
+        state = SlideState("ppt/slides/slide1.xml")
+
+        shape = emit_text_box(
+            {
+                "x": "1in",
+                "y": "1in",
+                "w": "4in",
+                "h": "1in",
+                "paragraphs": [
+                    {
+                        "runs": [{"text": "Spaced"}],
+                        "lineSpacing": 1.2,
+                        "spaceBefore": "3pt",
+                        "spaceAfter": "6pt",
+                    }
+                ],
+            },
+            state,
+        )
+
+        p_pr = shape.find("p:txBody/a:p/a:pPr", NSMAP)
+        self.assertEqual(p_pr.find("a:lnSpc/a:spcPct", NSMAP).get("val"), "120000")
+        self.assertEqual(p_pr.find("a:spcBef/a:spcPts", NSMAP).get("val"), "300")
+        self.assertEqual(p_pr.find("a:spcAft/a:spcPts", NSMAP).get("val"), "600")
+
+    def test_line_emits_native_connector_dash_and_cap(self):
+        state = SlideState("ppt/slides/slide1.xml")
+
+        line = emit_line(
+            {
+                "x1": "1in",
+                "y1": "1in",
+                "x2": "4in",
+                "y2": "2in",
+                "color": "accent2",
+                "width": "2pt",
+                "dash": "dash",
+                "cap": "round",
+            },
+            state,
+        )
+
+        self.assertEqual(line.tag, qn("p", "cxnSp"))
+        self.assertEqual(line.find("p:spPr/a:prstGeom", NSMAP).get("prst"), "line")
+        ln = line.find("p:spPr/a:ln", NSMAP)
+        self.assertEqual(ln.get("cap"), "rnd")
+        self.assertEqual(ln.find("a:solidFill/a:schemeClr", NSMAP).get("val"), "accent2")
+        self.assertEqual(ln.find("a:prstDash", NSMAP).get("val"), "dash")
+
+    def test_table_emits_native_graphic_frame_borders_and_merges(self):
+        state = SlideState("ppt/slides/slide1.xml")
+
+        table = emit_table(
+            {
+                "x": "1in",
+                "y": "1in",
+                "w": "4in",
+                "h": "1in",
+                "columns": [{"w": "2in"}, {"w": "2in"}],
+                "header": True,
+                "rows": [
+                    {
+                        "h": "1in",
+                        "cells": [
+                            {
+                                "gridSpan": 2,
+                                "rowSpan": 2,
+                                "text": "Header",
+                                "align": "ctr",
+                                "line": {"color": "dk2", "width": "0.75pt"},
+                            }
+                        ],
+                    }
+                ],
+            },
+            state,
+        )
+
+        self.assertEqual(table.tag, qn("p", "graphicFrame"))
+        self.assertIsNotNone(table.find("a:graphic/a:graphicData/a:tbl", NSMAP))
+        self.assertEqual(len(table.findall(".//a:tblGrid/a:gridCol", NSMAP)), 2)
+        cell = table.find(".//a:tc", NSMAP)
+        self.assertEqual(cell.get("gridSpan"), "2")
+        self.assertEqual(cell.get("rowSpan"), "2")
+        self.assertEqual(cell.find("a:txBody/a:p/a:r/a:t", NSMAP).text, "Header")
+        self.assertIsNotNone(cell.find("a:tcPr/a:solidFill", NSMAP))
+        self.assertIsNotNone(cell.find("a:tcPr/a:lnL/a:solidFill", NSMAP))
 
     def test_image_registers_media_relationship_and_content_type(self):
         content_types = ContentTypeRegistry()

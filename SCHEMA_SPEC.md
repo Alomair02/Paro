@@ -35,7 +35,23 @@ Two forms, both accepted by the existing `make_solid_fill`:
 Prefer tokens; use hex only when interoperating with an externally specified brand color the theme does not carry.
 
 ### Inheritance
-Deck sets defaults, slide overrides, container sets child defaults (gap, padding), block overrides. Text size/font is **not emitted unless explicitly set**, so it inherits from the master placeholder. Setting an explicit size opts out of inheritance for that text.
+Deck sets defaults, slide overrides, container sets child defaults (gap, padding), block overrides. Text is sized semantically through `role`; the active theme's `typeScale` owns the point size, weight, and paragraph spacing for each role. Explicit `size` is reserved for deliberate one-off emphasis and opts that text out of the theme scale.
+
+### Type Scale
+Each registered theme carries a `typeScale` map. The v1 roles are `title`, `heading`, `subheading`, `body`, `bodySmall`, and `caption`. Each role maps to:
+
+```json
+{
+  "size": 17,
+  "minSize": 15,
+  "weight": "normal",
+  "spaceBefore": "0pt",
+  "spaceAfter": "4pt",
+  "lineSpacing": 1.18
+}
+```
+
+`size` and `minSize` are in points, `weight` is `normal` or `bold`, and spacing values are optional. Authors select hierarchy with `role` on `<text>` or `<p>`; the resolver looks up the role through `ThemeRegistry.get(deck.theme)["typeScale"]`. Default role when omitted is `body`. `minSize` is the lower bound for optional validator-driven auto-shrink; it is not a second role and does not let text cross into a smaller role's visual territory.
 
 ### The layout strategies
 Every container is one of three:
@@ -76,6 +92,8 @@ Inline theme definition, **attribute form only** (this is the one blessed shape 
 ```
 
 Usually you reference a registered theme by name on `<deck>` instead of inlining. Inlining is for one-off decks.
+
+Registered theme data also includes a `typeScale` object for semantic text roles. Inline XML themes inherit the registered default type scale; future design-system ingestion can replace the entire scale in registry data without changing authored slide XML.
 
 ### `<defs>`, `<def>`, `<use>`
 Deck-level named, reusable elements declared once and referenced on any slide. The mechanism for repeated furniture (logo, footer, page number, draft watermark).
@@ -180,7 +198,8 @@ A text block. Contains paragraphs. Block-level attributes set defaults for all p
 | `placeholder` | placeholder type | none | Binds to a layout placeholder; inherits its position/style |
 | `idx` | integer | none | **New.** Disambiguates when a layout has multiple placeholders of the same type. Required when ambiguous. |
 | `font` | family | inherit | |
-| `size` | unit (pt) | inherit | **Omit to inherit from master — the anti-drift default** |
+| `size` | unit (pt) | inherit | Escape hatch for deliberate one-off emphasis; prefer `role` for hierarchy |
+| `role` | `title`, `heading`, `subheading`, `body`, `bodySmall`, `caption` | `body` | Semantic type role resolved through the active theme's `typeScale`; preferred over `size` |
 | `color` | token / hex | inherit | |
 | `align` | `l`, `ctr`, `r`, `just` | inherit | |
 | `bold`, `italic`, `underline` | boolean | false | **Whole-block formatting goes here, not in a wrapping `<run>`** (blessed form) |
@@ -201,6 +220,7 @@ A paragraph inside `<text>`.
 | Attribute | Values | Default | Notes |
 |---|---|---|---|
 | `level` | 0-8 | 0 | Outline / bullet level |
+| `role` | `title`, `heading`, `subheading`, `body`, `bodySmall`, `caption` | parent `<text>` role or `body` | Paragraph-level semantic type override |
 | `align` | `l`, `ctr`, `r`, `just` | inherit | Overrides block align |
 | `bullet` | `none`, `bullet`, `number`, `dash`, `check` | inherit from `<text list>` | **Blessed, extensible enum.** `bullet` = default theme glyph; `number` = ordered; `dash`/`check` = alternate markers; `none` = no marker. Inherits the parent `<text>`'s `list` value unless set. No literal-glyph form — the glyph for `bullet` comes from the theme. New marker types are added to this enum, never as new tags. |
 | `bold`, `italic` | boolean | inherit | Whole-paragraph emphasis (not a wrapping run) |
@@ -376,7 +396,7 @@ Run after parsing, before emitting, on the resolved coordinates:
 
 **Heuristic (warnings):**
 - Two children of a `<free>` container overlap.
-- Text whose measured size exceeds its resolved box (overflow). v1: warn. Later: auto-fit.
+- Text whose measured size exceeds its resolved box (overflow). The validator measures text with font metrics and reports the overflow amount. Optional auto-shrink is bounded to the active role's `minSize`; default behavior is warn-only.
 - Sibling text blocks whose font sizes differ beyond a threshold (drift signal).
 
 Managed containers (stack/grid/table) cannot produce overlap, so warnings essentially only fire inside `<free>`. That is the point: the safe path is warning-free by construction, and `<free>` is where the author has opted out of safety.
@@ -403,18 +423,18 @@ Managed containers (stack/grid/table) cannot produce overlap, so warnings essent
   <text placeholder="title">Project Plan for SectorMetric</text>
   <grid cols="3" gap="0.3in" pad="0.5in">
     <stack col="1" fill="lt2" radius="6pt" pad="0.2in" gap="0.1in">
-      <text size="14pt" bold="true" color="accent1">Our understanding</text>
-      <text size="11pt">
+      <text role="heading" color="accent1">Our understanding</text>
+      <text role="body">
         <p bullet="bullet">Speed</p>
         <p bullet="bullet">Accessibility</p>
       </text>
     </stack>
     <stack col="2" fill="lt2" radius="6pt" pad="0.2in" gap="0.1in">
-      <text size="14pt" bold="true" color="accent1">Risks &amp; issues</text>
-      <text size="11pt"><p bullet="bullet">Vendor security risk</p></text>
+      <text role="heading" color="accent1">Risks &amp; issues</text>
+      <text role="body"><p bullet="bullet">Vendor security risk</p></text>
     </stack>
     <stack col="3" fill="lt2" radius="6pt" pad="0.2in">
-      <text size="14pt" bold="true" color="accent1">Project plan</text>
+      <text role="heading" color="accent1">Project plan</text>
     </stack>
   </grid>
 </slide>
@@ -447,7 +467,7 @@ Full-bleed thirds, pinned to the bottom — no `13.333in` arithmetic.
 
 ### Mixed inline formatting (the correct `<run>` use)
 ```xml
-<text size="11pt">
+<text role="body">
   <p><run bold="true">Guidance:</run> Provide comfort that you understand the deliverables.</p>
 </text>
 ```
@@ -461,6 +481,7 @@ The pressure test showed both authors picking different valid encodings. These a
 
 - **Whole-block / whole-paragraph bold/italic** -> `bold`/`italic` attribute on `<text>` or `<p>`. **Not** a `<run>` wrapping the entire content.
 - **Mixed inline formatting** -> `<run>` children, used only for spans *within* a paragraph.
+- **Semantic text hierarchy** -> `role` on `<text>` or `<p>` (`title`, `heading`, `subheading`, `body`, `bodySmall`, `caption`). Theme `typeScale` owns size/weight/spacing. Use explicit `size` only for deliberate one-off emphasis, such as a callout number.
 - **Bullets** -> `bullet="bullet"` (default glyph) or `bullet="number"` (ordered). No literal-glyph form.
 - **Heading-then-body in a panel** -> two sibling `<text>` blocks inside the panel container (the first styled as a heading). The `<block type="heading">` element is **removed**.
 - **Inline theme** -> attribute form only; the child `<colors>`/`<fonts>` form is removed.
@@ -473,9 +494,9 @@ The pressure test showed both authors picking different valid encodings. These a
 
 ## 8. v1 Scope Boundary
 
-**In v1:** `<deck>`, `<theme>` (attr form), `<defs>`/`<def>`/`<use>`, `<slide>`, `<stack>` (with anchor + styled-container attrs), `<grid>` (with styled-container attrs), `<free>`, `<text>` (with `list`), `<p>`, `<run>`, `<image>` (with placeholder), `<shape>`, `<line>`, `<table>`/`<row>`/`<cell>` (with cell emphasis + styling), `<timeline>`/`<task>`/`<milestone>` (Tier-1 composite). Theme tokens + hex. Stack/grid/table/timeline resolvers, free passthrough, edge anchoring. Geometry validation (arithmetic) + overflow warning.
+**In v1:** `<deck>`, `<theme>` (attr form), theme `typeScale`, `<defs>`/`<def>`/`<use>`, `<slide>`, `<stack>` (with anchor + styled-container attrs), `<grid>` (with styled-container attrs), `<free>`, `<text>` (with `role` + `list`), `<p>` (with paragraph-level `role`), `<run>`, `<image>` (with placeholder), `<shape>`, `<line>`, `<table>`/`<row>`/`<cell>` (with cell emphasis + styling), `<timeline>`/`<task>`/`<milestone>` (Tier-1 composite). Theme tokens + hex. Stack/grid/table/timeline resolvers, free passthrough, edge anchoring. Geometry validation (arithmetic) + overflow warning.
 
-**Deferred to later:** `<chart>` (Tier-2 native chart part — a dedicated engine milestone: ChartBuilder + chart part + relationship + embedded workbook), additional Tier-1 composites (process flow, pyramid, funnel, comparison card), transitions/animations, text-measurement auto-fit (warn only in v1), nested grids spanning edge cases, quote/code styled blocks.
+**Deferred to later:** `<chart>` (Tier-2 native chart part — a dedicated engine milestone: ChartBuilder + chart part + relationship + embedded workbook), additional Tier-1 composites (process flow, pyramid, funnel, comparison card), transitions/animations, layout reflow / text restructuring, nested grids spanning edge cases, quote/code styled blocks.
 
 **Explicitly out of scope for the DSL (ingestion-layer responsibilities):** extracting/reusing assets from an existing PPTX, cloning a source deck's master/footer artwork, pixel-faithful replication of existing slides. The DSL generates; the ingestion layer turns an existing template into a reusable theme + layout set the DSL generates against.
 

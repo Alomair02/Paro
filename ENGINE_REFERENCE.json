@@ -86,6 +86,71 @@
     "rotation_per_degree": 60000
   },
 
+  "text_defaults": {
+    "_note": "Default paragraph/list constants used by the master styles and emitted paragraph overrides. Paragraph levels are DSL levels 0-8 and OOXML lvl values 0-8.",
+    "list_markers": {
+      "bullet": "\u2022",
+      "dash": "\u2013",
+      "check": "\u2713"
+    },
+    "numbering_type": "arabicPeriod",
+    "level_indents": [
+      { "marL": 342900,  "indent": -228600 },
+      { "marL": 800100,  "indent": -228600 },
+      { "marL": 1257300, "indent": -228600 },
+      { "marL": 1714500, "indent": -228600 },
+      { "marL": 2171700, "indent": -228600 },
+      { "marL": 2628900, "indent": -228600 },
+      { "marL": 3086100, "indent": -228600 },
+      { "marL": 3543300, "indent": -228600 },
+      { "marL": 4000500, "indent": -228600 }
+    ]
+  },
+
+  "default_theme": {
+    "_note": "Default engine theme data. The OOXML theme part consumes colors/fonts; the transpiler consumes typeScale for semantic text roles.",
+    "name": "Paro",
+    "colors": {
+      "dk1": "000000",
+      "lt1": "FFFFFF",
+      "dk2": "1F2937",
+      "lt2": "F8FAFC",
+      "accent1": "2563EB",
+      "accent2": "16A34A",
+      "accent3": "DC2626",
+      "accent4": "9333EA",
+      "accent5": "EA580C",
+      "accent6": "0891B2",
+      "hlink": "0000FF",
+      "folHlink": "800080"
+    },
+    "fonts": {
+      "heading": "Aptos Display",
+      "body": "Aptos"
+    },
+    "typeScale": {
+      "title":       { "size": 38,   "minSize": 34,   "weight": "bold",   "spaceAfter": "10pt", "lineSpacing": 1.05 },
+      "heading":     { "size": 24,   "minSize": 22,   "weight": "bold",   "spaceAfter": "6pt",  "lineSpacing": 1.10 },
+      "subheading":  { "size": 21,   "minSize": 19,   "weight": "normal", "spaceAfter": "5pt",  "lineSpacing": 1.12 },
+      "body":        { "size": 17,   "minSize": 15,   "weight": "normal", "spaceAfter": "4pt",  "lineSpacing": 1.18 },
+      "bodySmall":   { "size": 14,   "minSize": 12.5, "weight": "normal", "spaceAfter": "3pt",  "lineSpacing": 1.15 },
+      "caption":     { "size": 11.5, "minSize": 10.5, "weight": "normal", "spaceAfter": "2pt",  "lineSpacing": 1.10 }
+    }
+  },
+
+  "master_text_styles": {
+    "_note": "Documented master placeholder text defaults used to decide whether resolved role text can inherit by omission. Values are points.",
+    "title": { "size": 44 },
+    "body_level_sizes": [32, 30, 28, 26, 24, 22, 20, 18, 18],
+    "other": { "size": 24 },
+    "placeholder_style": {
+      "title": "title",
+      "ctrTitle": "title",
+      "subTitle": "other",
+      "body": "body"
+    }
+  },
+
   "slide_sizes": {
     "_note": "cx by cy in EMU. type attribute goes on p:sldSz.",
     "16:9":  { "cx": 12192000, "cy": 6858000, "type": "screen16x9" },

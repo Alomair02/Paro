@@ -8,7 +8,9 @@ from builders.shape_emitters import (
     SlideState,
     emit_autoshape,
     emit_image,
+    emit_line,
     emit_placeholder_text,
+    emit_table,
     emit_text_box,
 )
 from core.content_type_reg import ContentTypeRegistry
@@ -74,9 +76,9 @@ class SlideBuilder:
         shape_type = shape_data["type"]
 
         if shape_type in ("placeholder", "placeholder_text"):
-            return emit_placeholder_text(shape_data, slide_state)
+            return emit_placeholder_text(shape_data, slide_state, self.relationships)
         if shape_type in ("text_box", "textBox"):
-            return emit_text_box(shape_data, slide_state)
+            return emit_text_box(shape_data, slide_state, self.relationships)
         if shape_type == "image":
             return emit_image(
                 shape_data,
@@ -85,6 +87,10 @@ class SlideBuilder:
                 self.content_types,
             )
         if shape_type in ("autoshape", "shape"):
-            return emit_autoshape(shape_data, slide_state)
+            return emit_autoshape(shape_data, slide_state, self.relationships)
+        if shape_type == "line":
+            return emit_line(shape_data, slide_state)
+        if shape_type == "table":
+            return emit_table(shape_data, slide_state, self.relationships)
 
         raise ValueError(f"Unsupported shape type: {shape_type}")

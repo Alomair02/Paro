@@ -1,8 +1,9 @@
 """End-to-end deck orchestration helpers."""
 
+from copy import deepcopy
 from pathlib import Path
 
-from builders.common import package_path
+from builders.common import REFERENCE, package_path
 from builders.layout_builder import LAYOUT_DEFINITIONS, LayoutBuilder
 from builders.master_builder import MasterBuilder
 from builders.presentation_builder import PresentationBuilder
@@ -13,27 +14,7 @@ from core.content_type_reg import ContentTypeRegistry
 from core.relationship_reg import RelationshipRegistry
 
 
-SAMPLE_THEME = {
-    "name": "Paro",
-    "colors": {
-        "dk1": "000000",
-        "lt1": "FFFFFF",
-        "dk2": "1F2937",
-        "lt2": "F8FAFC",
-        "accent1": "2563EB",
-        "accent2": "16A34A",
-        "accent3": "DC2626",
-        "accent4": "9333EA",
-        "accent5": "EA580C",
-        "accent6": "0891B2",
-        "hlink": "0000FF",
-        "folHlink": "800080",
-    },
-    "fonts": {
-        "heading": "Aptos Display",
-        "body": "Aptos",
-    },
-}
+SAMPLE_THEME = deepcopy(REFERENCE["default_theme"])
 
 
 def build_deck(output_path: str | Path = "tests/fixtures/sample_deck.pptx") -> dict:

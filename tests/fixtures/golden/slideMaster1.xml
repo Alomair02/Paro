@@ -1,4 +1,4 @@
-<?xml version='1.0' encoding='UTF-8'?>
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <p:sldMaster xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006">
   <p:cSld>
     <p:spTree>
@@ -87,7 +87,7 @@
   </p:sldLayoutIdLst>
   <p:txStyles>
     <p:titleStyle>
-      <a:lvl1pPr algn="l" marL="0" indent="0">
+      <a:lvl1pPr algn="l" marL="342900" indent="-228600">
         <a:buNone/>
         <a:defRPr sz="4400">
           <a:solidFill>
@@ -100,7 +100,7 @@
       </a:lvl1pPr>
     </p:titleStyle>
     <p:bodyStyle>
-      <a:lvl1pPr algn="l" marL="0" indent="0">
+      <a:lvl1pPr algn="l" marL="342900" indent="-228600">
         <a:buNone/>
         <a:defRPr sz="3200">
           <a:solidFill>
@@ -111,7 +111,7 @@
           <a:cs typeface=""/>
         </a:defRPr>
       </a:lvl1pPr>
-      <a:lvl2pPr algn="l" marL="457200" indent="0">
+      <a:lvl2pPr algn="l" marL="800100" indent="-228600">
         <a:buNone/>
         <a:defRPr sz="3000">
           <a:solidFill>
@@ -122,7 +122,7 @@
           <a:cs typeface=""/>
         </a:defRPr>
       </a:lvl2pPr>
-      <a:lvl3pPr algn="l" marL="914400" indent="0">
+      <a:lvl3pPr algn="l" marL="1257300" indent="-228600">
         <a:buNone/>
         <a:defRPr sz="2800">
           <a:solidFill>
@@ -133,7 +133,7 @@
           <a:cs typeface=""/>
         </a:defRPr>
       </a:lvl3pPr>
-      <a:lvl4pPr algn="l" marL="1371600" indent="0">
+      <a:lvl4pPr algn="l" marL="1714500" indent="-228600">
         <a:buNone/>
         <a:defRPr sz="2600">
           <a:solidFill>
@@ -144,7 +144,7 @@
           <a:cs typeface=""/>
         </a:defRPr>
       </a:lvl4pPr>
-      <a:lvl5pPr algn="l" marL="1828800" indent="0">
+      <a:lvl5pPr algn="l" marL="2171700" indent="-228600">
         <a:buNone/>
         <a:defRPr sz="2400">
           <a:solidFill>
@@ -155,7 +155,7 @@
           <a:cs typeface=""/>
         </a:defRPr>
       </a:lvl5pPr>
-      <a:lvl6pPr algn="l" marL="2286000" indent="0">
+      <a:lvl6pPr algn="l" marL="2628900" indent="-228600">
         <a:buNone/>
         <a:defRPr sz="2200">
           <a:solidFill>
@@ -166,7 +166,7 @@
           <a:cs typeface=""/>
         </a:defRPr>
       </a:lvl6pPr>
-      <a:lvl7pPr algn="l" marL="2743200" indent="0">
+      <a:lvl7pPr algn="l" marL="3086100" indent="-228600">
         <a:buNone/>
         <a:defRPr sz="2000">
           <a:solidFill>
@@ -177,7 +177,7 @@
           <a:cs typeface=""/>
         </a:defRPr>
       </a:lvl7pPr>
-      <a:lvl8pPr algn="l" marL="3200400" indent="0">
+      <a:lvl8pPr algn="l" marL="3543300" indent="-228600">
         <a:buNone/>
         <a:defRPr sz="1800">
           <a:solidFill>
@@ -188,7 +188,7 @@
           <a:cs typeface=""/>
         </a:defRPr>
       </a:lvl8pPr>
-      <a:lvl9pPr algn="l" marL="3657600" indent="0">
+      <a:lvl9pPr algn="l" marL="4000500" indent="-228600">
         <a:buNone/>
         <a:defRPr sz="1800">
           <a:solidFill>
@@ -201,7 +201,7 @@
       </a:lvl9pPr>
     </p:bodyStyle>
     <p:otherStyle>
-      <a:lvl1pPr algn="l" marL="0" indent="0">
+      <a:lvl1pPr algn="l" marL="342900" indent="-228600">
         <a:buNone/>
         <a:defRPr sz="2400">
           <a:solidFill>

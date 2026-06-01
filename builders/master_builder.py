@@ -107,19 +107,43 @@ class MasterBuilder:
 
     def _make_text_styles(self) -> etree._Element:
         tx_styles = etree.Element(qn("p", "txStyles"))
+        master_styles = REFERENCE["master_text_styles"]
 
         title_style = etree.SubElement(tx_styles, qn("p", "titleStyle"))
-        title_style.append(self._make_level_style(1, 4400, "+mj-lt", "tx1"))
+        title_style.append(
+            self._make_level_style(
+                1,
+                self._points_to_ooxml(master_styles["title"]["size"]),
+                "+mj-lt",
+                "tx1",
+            )
+        )
 
         body_style = etree.SubElement(tx_styles, qn("p", "bodyStyle"))
-        for level in range(1, 10):
-            size = max(1800, 3200 - ((level - 1) * 200))
-            body_style.append(self._make_level_style(level, size, "+mn-lt", "tx1"))
+        for level, size_pt in enumerate(master_styles["body_level_sizes"], start=1):
+            body_style.append(
+                self._make_level_style(
+                    level,
+                    self._points_to_ooxml(size_pt),
+                    "+mn-lt",
+                    "tx1",
+                )
+            )
 
         other_style = etree.SubElement(tx_styles, qn("p", "otherStyle"))
-        other_style.append(self._make_level_style(1, 2400, "+mn-lt", "tx1"))
+        other_style.append(
+            self._make_level_style(
+                1,
+                self._points_to_ooxml(master_styles["other"]["size"]),
+                "+mn-lt",
+                "tx1",
+            )
+        )
 
         return tx_styles
+
+    def _points_to_ooxml(self, size_pt: int | float) -> int:
+        return int(float(size_pt) * REFERENCE["units"]["font_size_factor"])
 
     def _make_level_style(
         self,
@@ -128,10 +152,11 @@ class MasterBuilder:
         latin_typeface: str,
         color: str,
     ) -> etree._Element:
+        indent = REFERENCE["text_defaults"]["level_indents"][level - 1]
         p_pr = etree.Element(qn("a", f"lvl{level}pPr"))
         p_pr.set("algn", "l")
-        p_pr.set("marL", str((level - 1) * 457200))
-        p_pr.set("indent", "0")
+        p_pr.set("marL", str(indent["marL"]))
+        p_pr.set("indent", str(indent["indent"]))
         etree.SubElement(p_pr, qn("a", "buNone"))
 
         def_r_pr = etree.SubElement(p_pr, qn("a", "defRPr"))

@@ -157,16 +157,26 @@ def make_no_fill() -> etree._Element:
 # Line / stroke builder
 # ---------------------------------------------------------------------------
 
-def make_ln(width_emu: int = 0, color: str = None) -> etree._Element:
+def make_ln(
+    width_emu: int = 0,
+    color: str = None,
+    dash: str = None,
+    cap: str = None,
+) -> etree._Element:
     """
     Build an a:ln element.
     width_emu = 0 → no line (a:noFill inside).
     color follows the same rules as make_solid_fill.
     """
     ln = etree.Element(qn("a", "ln"))
+    if cap:
+        ln.set("cap", cap)
     if width_emu:
         ln.set("w", str(width_emu))
         ln.append(make_solid_fill(color if color else "dk1"))
+        if dash and dash != "solid":
+            prst_dash = etree.SubElement(ln, qn("a", "prstDash"))
+            prst_dash.set("val", dash)
     else:
         ln.append(make_no_fill())
     return ln
@@ -179,9 +189,11 @@ def make_ln(width_emu: int = 0, color: str = None) -> etree._Element:
 def make_run(text: str,
              bold: bool = False,
              italic: bool = False,
+             underline: bool = False,
              size_pt: float = None,
              color: str = None,
-             font: str = None) -> etree._Element:
+             font: str = None,
+             hyperlink_rid: str = None) -> etree._Element:
     """
     Build an a:r element (text run).
     size_pt is in points; converted internally to hundredths of a point.
@@ -192,15 +204,19 @@ def make_run(text: str,
     rpr.set("lang", "en-US")
     rpr.set("dirty", "0")
 
-    if bold:    rpr.set("b", "1")
-    if italic:  rpr.set("i", "1")
-    if size_pt: rpr.set("sz", str(int(size_pt * 100)))
+    if bold:      rpr.set("b", "1")
+    if italic:    rpr.set("i", "1")
+    if underline: rpr.set("u", "sng")
+    if size_pt:   rpr.set("sz", str(int(size_pt * 100)))
 
     if color:
         rpr.append(make_solid_fill(color))
     if font:
         latin = etree.SubElement(rpr, qn("a", "latin"))
         latin.set("typeface", font)
+    if hyperlink_rid:
+        hlink = etree.SubElement(rpr, qn("a", "hlinkClick"))
+        hlink.set(qn("r", "id"), hyperlink_rid)
 
     t = etree.SubElement(run, qn("a", "t"))
     t.text = text
@@ -210,7 +226,15 @@ def make_run(text: str,
 
 def make_paragraph(runs: list = None,
                    level: int = 0,
-                   align: str = None) -> etree._Element:
+                   align: str = None,
+                   bullet: str = None,
+                   bullet_char: str = None,
+                   number_type: str = "arabicPeriod",
+                   mar_l: int = None,
+                   indent: int = None,
+                   line_spacing: dict = None,
+                   space_before: int = None,
+                   space_after: int = None) -> etree._Element:
     """
     Build an a:p element (paragraph) containing the given runs.
     level: bullet indent level 0–8.
@@ -222,6 +246,31 @@ def make_paragraph(runs: list = None,
     ppr = etree.SubElement(para, qn("a", "pPr"))
     if level: ppr.set("lvl", str(level))
     if align: ppr.set("algn", align)
+    if mar_l is not None: ppr.set("marL", str(mar_l))
+    if indent is not None: ppr.set("indent", str(indent))
+
+    if line_spacing:
+        ln_spc = etree.SubElement(ppr, qn("a", "lnSpc"))
+        tag = "spcPct" if line_spacing["type"] == "pct" else "spcPts"
+        spc = etree.SubElement(ln_spc, qn("a", tag))
+        spc.set("val", str(line_spacing["val"]))
+    if space_before is not None:
+        spc_bef = etree.SubElement(ppr, qn("a", "spcBef"))
+        spc = etree.SubElement(spc_bef, qn("a", "spcPts"))
+        spc.set("val", str(space_before))
+    if space_after is not None:
+        spc_aft = etree.SubElement(ppr, qn("a", "spcAft"))
+        spc = etree.SubElement(spc_aft, qn("a", "spcPts"))
+        spc.set("val", str(space_after))
+
+    if bullet == "none":
+        etree.SubElement(ppr, qn("a", "buNone"))
+    elif bullet == "number":
+        bu_auto_num = etree.SubElement(ppr, qn("a", "buAutoNum"))
+        bu_auto_num.set("type", number_type)
+    elif bullet in {"bullet", "dash", "check"}:
+        bu_char = etree.SubElement(ppr, qn("a", "buChar"))
+        bu_char.set("char", bullet_char or "")
 
     for run in (runs or []):
         para.append(run)
