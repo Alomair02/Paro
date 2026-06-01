@@ -18,7 +18,7 @@ from builders.slide_builder import SlideBuilder
 from builders.zip_assembler import ZIPAssembler
 from core.content_type_reg import ContentTypeRegistry
 from core.relationship_reg import RelationshipRegistry
-from core.xml_builder import NSMAP, qn
+from core.xml_builder import CANONICAL_XML_DECLARATION, NSMAP, qn
 from tests.pptx_test_utils import CT_NS, REL_NS, build_core_parts, parse_xml
 
 
@@ -270,13 +270,21 @@ class ZIPAssemblerTests(unittest.TestCase):
                 self.assertIn("ppt/presProps.xml", names)
                 self.assertIn("ppt/viewProps.xml", names)
                 self.assertIn("ppt/tableStyles.xml", names)
+                self.assertIn("docProps/core.xml", names)
+                self.assertIn("docProps/app.xml", names)
                 self.assertFalse(any(name.endswith("/") for name in names))
+                for name in names:
+                    if name.endswith(".xml"):
+                        first_line = pptx.read(name).decode("utf-8").splitlines()[0]
+                        self.assertEqual(first_line, CANONICAL_XML_DECLARATION)
 
                 content_types = parse_xml(pptx.read("[Content_Types].xml").decode("utf-8"))
                 for part_name in (
                     "/ppt/presProps.xml",
                     "/ppt/viewProps.xml",
                     "/ppt/tableStyles.xml",
+                    "/docProps/core.xml",
+                    "/docProps/app.xml",
                 ):
                     self.assertIsNotNone(
                         content_types.find(f'ct:Override[@PartName="{part_name}"]', CT_NS)
@@ -284,7 +292,42 @@ class ZIPAssemblerTests(unittest.TestCase):
 
                 package_rels = parse_xml(pptx.read("_rels/.rels").decode("utf-8"))
                 office_rels = package_rels.findall("rel:Relationship", REL_NS)
-                self.assertEqual(office_rels[0].get("Target"), "ppt/presentation.xml")
+                self.assertEqual(len(office_rels), 3)
+                targets_by_type = {rel.get("Type"): rel.get("Target") for rel in office_rels}
+                self.assertEqual(
+                    targets_by_type[RelationshipRegistry.OFFICE_DOC],
+                    "ppt/presentation.xml",
+                )
+                self.assertEqual(
+                    targets_by_type[RelationshipRegistry.CORE_PROPERTIES],
+                    "docProps/core.xml",
+                )
+                self.assertEqual(
+                    targets_by_type[RelationshipRegistry.EXTENDED_PROPERTIES],
+                    "docProps/app.xml",
+                )
+
+                core_props = parse_xml(pptx.read("docProps/core.xml").decode("utf-8"))
+                core_ns = {
+                    "dc": "http://purl.org/dc/elements/1.1/",
+                    "dcterms": "http://purl.org/dc/terms/",
+                }
+                self.assertEqual(
+                    core_props.find("dc:title", core_ns).text,
+                    "Paro Generated Presentation",
+                )
+                self.assertEqual(
+                    core_props.find("dc:creator", core_ns).text,
+                    "Paro PPTX Engine",
+                )
+                self.assertEqual(
+                    core_props.find("dcterms:created", core_ns).text,
+                    "2026-06-01T00:00:00Z",
+                )
+                self.assertEqual(
+                    core_props.find("dcterms:modified", core_ns).text,
+                    "2026-06-01T00:00:00Z",
+                )
 
                 presentation_rels = parse_xml(
                     pptx.read("ppt/_rels/presentation.xml.rels").decode("utf-8")
@@ -296,6 +339,23 @@ class ZIPAssemblerTests(unittest.TestCase):
                 self.assertIn(RelationshipRegistry.PRES_PROPS, rel_types)
                 self.assertIn(RelationshipRegistry.VIEW_PROPS, rel_types)
                 self.assertIn(RelationshipRegistry.TABLE_STYLES, rel_types)
+
+    def test_assembler_app_props_slide_count_matches_slide_parts(self):
+        graph = build_core_parts(synthetic_slide_count=2)
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = Path(tmpdir) / "assembled.pptx"
+            ZIPAssembler(
+                graph["content_types"],
+                graph["relationships"],
+            ).assemble(output_path, graph["parts"])
+
+            with ZipFile(output_path) as pptx:
+                app_props = parse_xml(pptx.read("docProps/app.xml").decode("utf-8"))
+
+        app_ns = {"ep": "http://schemas.openxmlformats.org/officeDocument/2006/extended-properties"}
+        self.assertEqual(app_props.find("ep:Application", app_ns).text, "Paro PPTX Engine")
+        self.assertEqual(app_props.find("ep:Slides", app_ns).text, "2")
 
 
 class EndToEndDeckTests(unittest.TestCase):

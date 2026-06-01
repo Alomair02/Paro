@@ -11,6 +11,8 @@ Pure functions — no side effects, no state.
 
 from lxml import etree
 
+CANONICAL_XML_DECLARATION = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+
 
 # ---------------------------------------------------------------------------
 # Namespace map — every OOXML builder uses these
@@ -58,12 +60,17 @@ def to_xml_string(element: etree._Element,
                   xml_declaration: bool = True,
                   encoding: str = "UTF-8") -> str:
     """Serialize an lxml element to a UTF-8 XML string."""
-    return etree.tostring(
+    xml = etree.tostring(
         element,
         pretty_print=pretty_print,
-        xml_declaration=xml_declaration,
+        xml_declaration=False,
         encoding=encoding,
     ).decode(encoding)
+
+    if not xml_declaration:
+        return xml
+
+    return f"{CANONICAL_XML_DECLARATION}\n{xml}"
 
 
 def parse_xml_string(xml_string: str) -> etree._Element:

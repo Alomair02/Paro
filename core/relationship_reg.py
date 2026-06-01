@@ -24,6 +24,8 @@ class RelationshipRegistry:
     PRES_PROPS    = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/presProps"
     VIEW_PROPS    = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/viewProps"
     TABLE_STYLES  = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/tableStyles"
+    CORE_PROPERTIES = "http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties"
+    EXTENDED_PROPERTIES = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties"
 
     def __init__(self):
         self.registry = {}
@@ -85,7 +87,9 @@ class RelationshipRegistry:
             RelationshipRegistry.HYPERLINK,
             RelationshipRegistry.PRES_PROPS,
             RelationshipRegistry.VIEW_PROPS,
-            RelationshipRegistry.TABLE_STYLES
+            RelationshipRegistry.TABLE_STYLES,
+            RelationshipRegistry.CORE_PROPERTIES,
+            RelationshipRegistry.EXTENDED_PROPERTIES,
         }
         if rel_type not in valid_types:
             raise ValueError(f"Invalid relationship type: {rel_type}")

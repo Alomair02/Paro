@@ -3,7 +3,13 @@ from xml.etree import ElementTree
 
 from core.content_type_reg import ContentTypeRegistry
 from core.relationship_reg import RelationshipRegistry
-from core.xml_builder import make_solid_fill, make_text_body, qn
+from core.xml_builder import (
+    CANONICAL_XML_DECLARATION,
+    make_solid_fill,
+    make_text_body,
+    qn,
+    to_xml_string,
+)
 from utils.converter import UnitConverter
 
 
@@ -119,6 +125,11 @@ class ContentTypeRegistryTests(unittest.TestCase):
 
 
 class XmlBuilderTests(unittest.TestCase):
+    def test_to_xml_string_uses_canonical_xml_declaration(self):
+        xml = to_xml_string(make_solid_fill("accent1"))
+
+        self.assertEqual(xml.splitlines()[0], CANONICAL_XML_DECLARATION)
+
     def test_empty_text_body_gets_empty_paragraph(self):
         txbody = make_text_body([])
 
