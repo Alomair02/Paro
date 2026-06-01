@@ -107,14 +107,18 @@ def make_xfrm(x: int, y: int, cx: int, cy: int,
     return xfrm
 
 
-def make_prst_geom(prst: str = "rect") -> etree._Element:
+def make_prst_geom(prst: str = "rect", adjustments: dict[str, int] = None) -> etree._Element:
     """
     Build an a:prstGeom element for a preset shape.
     prst is one of the 187 preset shape names: "rect", "ellipse", "roundRect", etc.
     """
     geom = etree.Element(qn("a", "prstGeom"))
     geom.set("prst", prst)
-    etree.SubElement(geom, qn("a", "avLst"))  # required child, even if empty
+    av_lst = etree.SubElement(geom, qn("a", "avLst"))  # required child, even if empty
+    for name, value in (adjustments or {}).items():
+        gd = etree.SubElement(av_lst, qn("a", "gd"))
+        gd.set("name", name)
+        gd.set("fmla", f"val {int(value)}")
     return geom
 
 
@@ -130,8 +134,10 @@ _SCHEME_TOKENS = {
     "tx1", "tx2", "phClr",
 }
 
+_PERCENT_COLOR_TRANSFORMS = {"lumMod", "lumOff"}
 
-def make_solid_fill(color: str) -> etree._Element:
+
+def make_solid_fill(color: str, transforms: dict[str, int] = None) -> etree._Element:
     """
     Build an a:solidFill element.
     color is either:
@@ -139,13 +145,69 @@ def make_solid_fill(color: str) -> etree._Element:
       - a hex RGB string like "FF0000"         → a:srgbClr
     """
     fill = etree.Element(qn("a", "solidFill"))
+    _append_color(fill, color, transforms)
+    return fill
+
+
+def make_gradient_fill(
+    color: str,
+    start_transforms: dict[str, int] = None,
+    end_transforms: dict[str, int] = None,
+    angle: int = 5400000,
+) -> etree._Element:
+    """Build a subtle two-stop a:gradFill using one base color ramp."""
+    fill = etree.Element(qn("a", "gradFill"))
+    fill.set("rotWithShape", "1")
+    gs_lst = etree.SubElement(fill, qn("a", "gsLst"))
+    first = etree.SubElement(gs_lst, qn("a", "gs"))
+    first.set("pos", "0")
+    _append_color(first, color, start_transforms or {"lumMod": 100000, "lumOff": 12000})
+    second = etree.SubElement(gs_lst, qn("a", "gs"))
+    second.set("pos", "100000")
+    _append_color(second, color, end_transforms or {"lumMod": 88000})
+    lin = etree.SubElement(fill, qn("a", "lin"))
+    lin.set("ang", str(angle))
+    lin.set("scaled", "1")
+    return fill
+
+
+def make_effect_list(shadow: dict = None) -> etree._Element:
+    """Build an a:effectLst with an optional outer shadow."""
+    effect_lst = etree.Element(qn("a", "effectLst"))
+    if shadow:
+        outer = etree.SubElement(effect_lst, qn("a", "outerShdw"))
+        outer.set("blurRad", str(int(shadow.get("blurRad", 0))))
+        outer.set("dist", str(int(shadow.get("dist", 0))))
+        outer.set("dir", str(int(shadow.get("dir", 2700000))))
+        outer.set("algn", shadow.get("algn", "ctr"))
+        outer.set("rotWithShape", "0")
+        _append_color(
+            outer,
+            shadow.get("color", "000000"),
+            {"alpha": int(shadow.get("alpha", 18000))},
+        )
+    return effect_lst
+
+
+def _append_color(parent: etree._Element, color: str, transforms: dict[str, int] = None) -> etree._Element:
     if color in _SCHEME_TOKENS:
-        clr = etree.SubElement(fill, qn("a", "schemeClr"))
+        clr = etree.SubElement(parent, qn("a", "schemeClr"))
         clr.set("val", color)
     else:
-        clr = etree.SubElement(fill, qn("a", "srgbClr"))
+        clr = etree.SubElement(parent, qn("a", "srgbClr"))
         clr.set("val", color.lstrip("#").upper())
-    return fill
+
+    for name, value in (transforms or {}).items():
+        value = int(value)
+        _validate_color_transform(name, value)
+        child = etree.SubElement(clr, qn("a", name))
+        child.set("val", str(value))
+    return clr
+
+
+def _validate_color_transform(name: str, value: int):
+    if name in _PERCENT_COLOR_TRANSFORMS and not 0 <= value <= 100000:
+        raise ValueError(f"{name} must be between 0 and 100000, got {value}")
 
 
 def make_no_fill() -> etree._Element:
@@ -162,6 +224,7 @@ def make_ln(
     color: str = None,
     dash: str = None,
     cap: str = None,
+    color_transforms: dict[str, int] = None,
 ) -> etree._Element:
     """
     Build an a:ln element.
@@ -173,7 +236,7 @@ def make_ln(
         ln.set("cap", cap)
     if width_emu:
         ln.set("w", str(width_emu))
-        ln.append(make_solid_fill(color if color else "dk1"))
+        ln.append(make_solid_fill(color if color else "dk1", color_transforms))
         if dash and dash != "solid":
             prst_dash = etree.SubElement(ln, qn("a", "prstDash"))
             prst_dash.set("val", dash)

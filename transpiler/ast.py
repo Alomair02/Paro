@@ -50,6 +50,7 @@ class DeckAst:
     theme: str
     size: str
     font: str | None
+    background: str | None
     inline_theme: ThemeAst | None
     slides: list[SlideAst]
     defs: dict[str, list[Node]]
@@ -100,4 +101,3 @@ class ResolvedSlide:
     grid_placements: list[dict[str, Any]] = field(default_factory=list)
     placeholder_refs: list[dict[str, Any]] = field(default_factory=list)
     sibling_font_groups: list[list[dict[str, Any]]] = field(default_factory=list)
-

@@ -23,6 +23,7 @@ def build_deck(output_path: str | Path = "tests/fixtures/sample_deck.pptx") -> d
     relationships = RelationshipRegistry()
     parts: dict[str, str | bytes] = {}
     media_parts: dict[str, bytes] = {}
+    media_sources: dict[str, str] = {}
 
     theme_path = package_path("theme", 1)
     parts[theme_path] = ThemeBuilder(content_types, relationships).build(
@@ -42,7 +43,7 @@ def build_deck(output_path: str | Path = "tests/fixtures/sample_deck.pptx") -> d
         part_path=master_path,
     )
 
-    slide_builder = SlideBuilder(content_types, relationships, media_parts)
+    slide_builder = SlideBuilder(content_types, relationships, media_parts, media_sources)
     slide_data = _sample_slides()
     slide_paths = []
     for slide in slide_data:

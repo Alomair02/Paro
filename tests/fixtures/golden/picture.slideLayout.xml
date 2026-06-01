@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<p:sldLayout xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" type="obj" preserve="1">
-  <p:cSld name="Title and Content">
+<p:sldLayout xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" type="picTx" preserve="1">
+  <p:cSld name="Picture">
     <p:spTree>
       <p:nvGrpSpPr>
         <p:cNvPr id="1" name=""/>
@@ -17,7 +17,7 @@
       </p:grpSpPr>
       <p:sp>
         <p:nvSpPr>
-          <p:cNvPr id="2" name="Title and Content Placeholder 0"/>
+          <p:cNvPr id="2" name="Picture Placeholder 0"/>
           <p:cNvSpPr>
             <a:spLocks noGrp="1"/>
           </p:cNvSpPr>
@@ -48,12 +48,12 @@
       </p:sp>
       <p:sp>
         <p:nvSpPr>
-          <p:cNvPr id="3" name="Title and Content Placeholder 1"/>
+          <p:cNvPr id="3" name="Picture Placeholder 1"/>
           <p:cNvSpPr>
             <a:spLocks noGrp="1"/>
           </p:cNvSpPr>
           <p:nvPr>
-            <p:ph type="body" idx="1"/>
+            <p:ph type="pic" idx="1"/>
           </p:nvPr>
         </p:nvSpPr>
         <p:spPr>

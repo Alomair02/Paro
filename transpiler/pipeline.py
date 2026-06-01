@@ -104,6 +104,7 @@ def _build_package(resolved: ResolvedDeck, output_path: Path) -> dict[str, Any]:
     relationships = RelationshipRegistry()
     parts: dict[str, str | bytes] = {}
     media_parts: dict[str, bytes] = {}
+    media_sources: dict[str, str] = {}
 
     theme_path = package_path("theme", 1)
     parts[theme_path] = ThemeBuilder(content_types, relationships).build(
@@ -123,7 +124,7 @@ def _build_package(resolved: ResolvedDeck, output_path: Path) -> dict[str, Any]:
         part_path=master_path,
     )
 
-    slide_builder = SlideBuilder(content_types, relationships, media_parts)
+    slide_builder = SlideBuilder(content_types, relationships, media_parts, media_sources)
     slide_paths = []
     for slide in resolved.slide_data:
         slide_path = package_path("slide", slide["index"])

@@ -5,6 +5,7 @@ from core.content_type_reg import ContentTypeRegistry
 from core.relationship_reg import RelationshipRegistry
 from core.xml_builder import (
     CANONICAL_XML_DECLARATION,
+    make_gradient_fill,
     make_solid_fill,
     make_text_body,
     qn,
@@ -156,6 +157,21 @@ class XmlBuilderTests(unittest.TestCase):
         srgb = fill.find(qn("a", "srgbClr"))
         self.assertIsNotNone(srgb)
         self.assertEqual(srgb.get("val"), "FF0000")
+
+    def test_luminance_transforms_must_be_ooxml_percentages(self):
+        with self.assertRaisesRegex(ValueError, "lumMod"):
+            make_solid_fill("accent1", {"lumMod": 100001})
+        with self.assertRaisesRegex(ValueError, "lumOff"):
+            make_gradient_fill("accent1", {"lumMod": 100000, "lumOff": -1}, {"lumMod": 82000})
+
+        fill = make_gradient_fill("accent1", {"lumMod": 100000, "lumOff": 18000}, {"lumMod": 82000})
+        values = [
+            int(node.get("val"))
+            for transform in ("lumMod", "lumOff")
+            for node in fill.findall(f".//{qn('a', transform)}")
+        ]
+        self.assertTrue(values)
+        self.assertLessEqual(max(values), 100000)
 
 
 class UnitConverterTests(unittest.TestCase):

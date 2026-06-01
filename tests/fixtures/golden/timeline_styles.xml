@@ -1,0 +1,78 @@
+<deck theme="default" size="16:9">
+  <slide layout="blank" flow="free">
+    <timeline x="0.7in" y="0.7in" w="11.8in" h="5.4in" periods="6" unit="week" labels="W1,W2,W3,W4,W5,W6" style="gantt-grid">
+      <task label="Discovery research" start="1" span="2" tone="accent2"/>
+      <task label="Build prototype" start="3" span="3" tone="accent1"/>
+      <task label="Launch readiness" start="5" span="2" tone="accent3"/>
+      <milestone label="Kickoff" at="1"/>
+      <milestone label="Executive review" at="4"/>
+    </timeline>
+  </slide>
+  <slide layout="blank" flow="free">
+    <timeline x="0.7in" y="0.7in" w="11.8in" h="5.4in" periods="6" unit="month" style="gantt-minimal">
+      <task label="Strategy alignment" start="1" span="2"/>
+      <task label="Implementation" start="2" span="4"/>
+      <task label="Transition" start="6" span="1"/>
+      <milestone label="Alpha gate" at="3"/>
+      <milestone label="Beta gate" at="3"/>
+    </timeline>
+  </slide>
+  <slide layout="blank" flow="free">
+    <timeline x="0.7in" y="0.7in" w="11.8in" h="5.4in" periods="5" unit="quarter" style="roadmap">
+      <task label="Platform foundation" start="1" span="2" tone="accent1"/>
+      <task label="Experience launch" start="2" span="2" tone="accent4"/>
+      <task label="Scale markets" start="4" span="2" tone="accent2"/>
+      <milestone label="Board update" at="2"/>
+      <milestone label="Public launch" at="5"/>
+    </timeline>
+  </slide>
+  <slide layout="blank" flow="free">
+    <timeline x="0.7in" y="0.7in" w="11.8in" h="5.4in" periods="6" unit="week" style="swimlane">
+      <group label="Discovery">
+        <task label="Research" start="1" span="2"/>
+        <task label="Synthesis" start="3" span="1"/>
+      </group>
+      <group label="Delivery">
+        <task label="Build" start="3" span="3"/>
+        <task label="Rollout" start="5" span="2"/>
+      </group>
+      <milestone label="Decision" at="3"/>
+      <milestone label="Go-live" at="6"/>
+    </timeline>
+  </slide>
+  <slide layout="blank" flow="free">
+    <text x="0.7in" y="0.45in" w="8.5in" h="0.55in" role="heading">Deloitte sample Gantt approximation</text>
+    <shape x="0.7in" y="1.08in" w="1.3in" h="0.28in" fill="#53565A" line="none">
+      <text role="caption" color="lt1" align="ctr">Phase</text>
+    </shape>
+    <timeline x="0.7in" y="1.36in" w="11.8in" h="4.95in" periods="10" unit="week" labels="W1,W2,W3,W4,W5,W6,W7,W8,W9,W10" style="gantt-grid">
+      <task label="Activity 1" start="1" span="4" tone="#49A6D1"/>
+      <task label="Activity 2" start="1" span="6" tone="#1C4E74"/>
+      <task label="Activity 3" start="1" span="8" tone="accent2"/>
+      <task label="Weekly Leads Meeting" start="1" span="10" tone="#53565A"/>
+      <milestone label="Milestone" at="3"/>
+      <milestone label="Project status meeting" at="5"/>
+    </timeline>
+  </slide>
+  <slide layout="blank" flow="free">
+    <text x="0.7in" y="0.45in" w="8.5in" h="0.55in" role="heading">Timeline finish gallery</text>
+    <timeline x="0.7in" y="1.1in" w="5.7in" h="1.0in" periods="4" labels="Q1,Q2,Q3,Q4" style="gantt-grid" finish="flat">
+      <task label="flat" start="1" span="3" tone="accent1"/>
+    </timeline>
+    <timeline x="6.7in" y="1.1in" w="5.7in" h="1.0in" periods="4" labels="Q1,Q2,Q3,Q4" style="gantt-grid" finish="soft-shadow">
+      <task label="soft-shadow" start="1" span="3" tone="accent2"/>
+    </timeline>
+    <timeline x="0.7in" y="2.45in" w="5.7in" h="1.0in" periods="4" labels="Q1,Q2,Q3,Q4" style="gantt-grid" finish="elevated">
+      <task label="elevated" start="1" span="3" tone="accent3"/>
+    </timeline>
+    <timeline x="6.7in" y="2.45in" w="5.7in" h="1.0in" periods="4" labels="Q1,Q2,Q3,Q4" style="gantt-grid" finish="outlined">
+      <task label="outlined" start="1" span="3" tone="accent4"/>
+    </timeline>
+    <timeline x="0.7in" y="3.8in" w="5.7in" h="1.0in" periods="4" labels="Q1,Q2,Q3,Q4" style="gantt-grid" finish="accent-gradient">
+      <task label="accent-gradient" start="1" span="3" tone="accent5"/>
+    </timeline>
+    <timeline x="6.7in" y="3.8in" w="5.7in" h="1.0in" periods="4" labels="Q1,Q2,Q3,Q4" style="gantt-grid" finish="flat" borderWidth="2pt" shadow="true">
+      <task label="local overrides" start="1" span="3" tone="accent6"/>
+    </timeline>
+  </slide>
+</deck>

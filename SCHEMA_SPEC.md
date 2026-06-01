@@ -76,6 +76,7 @@ Root element. Holds defaults and reusable definitions.
 | `theme` | theme name | `"default"` | Resolved via ThemeRegistry |
 | `size` | `16:9`, `4:3`, `16:10` | `16:9` | Slide dimensions |
 | `font` | font family | from theme | Default body font |
+| `background` | token / hex / `image:path` | none | Default background for every slide; slide-level `background` overrides |
 
 Children: optional `<theme>` (inline theme def), optional `<defs>` (reusable definitions), one or more `<slide>`.
 
@@ -126,8 +127,11 @@ A slide is itself the root container of its content.
 | `flow` | `stack`, `grid`, `free` | `stack` | The slide root's own layout strategy |
 | `pad` | unit | from layout | Padding inside the slide edge |
 | `gap` | unit | `0.2in` | Gap between root children (if `flow="stack"`) |
+| `background` | token / hex / `image:path` | deck background | Per-slide background override |
 
 Children: containers (`<stack>`, `<grid>`, `<free>`) and/or blocks (`<text>`, `<image>`, `<shape>`, `<table>`, `<line>`).
+
+`background` accepts a theme token (`accent5`, `lt2`), a hex literal (`#0F172A`), or an image reference (`image:cover.jpg`). Deck-level background is the default for every slide; slide-level background wins when both are present. Omit both to leave the slide background inherited/white.
 
 ### `<stack>`
 Flows children in one direction; the container owns the spacing between them.
@@ -325,19 +329,27 @@ A composite for time-based visuals. Resolves to a table-like grid of week/period
 
 | Attribute | Values | Default | Notes |
 |---|---|---|---|
-| `style` | `gantt`, `milestones`, `roadmap` | `gantt` | Visual treatment |
+| `style` | `gantt-grid`, `gantt-minimal`, `roadmap`, `swimlane` | `gantt-grid` | Registered style name resolved through the `TimelineStyleRegistry` |
+| `finish` | `flat`, `soft-shadow`, `elevated`, `outlined`, `accent-gradient` | style default | Curated finish preset for bars; overrides the selected style's default |
+| `borderWidth` | unit | finish default | Optional local border thickness override |
+| `shadow` | boolean | finish default | Optional local shadow on/off override |
 | `periods` | integer | required | Number of time columns (e.g. 10 weeks) |
-| `labels` | list of strings | `Week 1…N` | Column header labels |
+| `unit` | `week`, `month`, `quarter`, `day` | `week` | Drives generated period labels when `labels` is omitted |
+| `labels` | list of strings | from `unit` | Column header labels |
 | `w`, `h`, `x`, `y` | unit / `%` | from container | Geometry |
 
-Children: `<task>` elements (for `gantt`/`roadmap`) and/or `<milestone>` elements.
+Children: optional `<group>` elements, flat `<task>` elements, and/or `<milestone>` elements. A timeline with no `<group>` is a flat task list; a timeline with groups is swimlane-organized when the selected style renders groups.
+
+| `<group>` attribute | Values | Default | Notes |
+|---|---|---|---|
+| `label` | string | required | Swimlane / workstream label |
 
 | `<task>` attribute | Values | Default | Notes |
 |---|---|---|---|
 | `label` | string | required | Row label |
 | `start` | integer (1-based period) | required | Starting period |
 | `span` | integer | `1` | Periods spanned |
-| `fill` | token / hex | `accent1` | Bar color |
+| `tone` | theme token / hex | style default | Semantic bar color; resolved by the selected style |
 
 | `<milestone>` attribute | Values | Default | Notes |
 |---|---|---|---|
@@ -345,15 +357,20 @@ Children: `<task>` elements (for `gantt`/`roadmap`) and/or `<milestone>` element
 | `at` | integer (1-based period) | required | Period of the milestone |
 
 ```xml
-<timeline style="gantt" periods="10">
-  <task label="Discovery"  start="1" span="3" fill="accent2"/>
-  <task label="Build"      start="3" span="4" fill="accent1"/>
-  <task label="Rollout"    start="6" span="5" fill="accent3"/>
+<timeline style="gantt-grid" periods="10" unit="week">
+  <group label="Discovery">
+    <task label="Research"  start="1" span="3" tone="accent2"/>
+    <task label="Synthesis" start="3" span="2" tone="accent2"/>
+  </group>
+  <group label="Delivery">
+    <task label="Build"     start="4" span="4" tone="accent1"/>
+    <task label="Rollout"   start="7" span="4" tone="accent3"/>
+  </group>
   <milestone label="Kickoff"   at="1"/>
   <milestone label="Go-live"   at="10"/>
 </timeline>
 ```
-`start` + `span` encode both offset and length — the thing proportional-width bars could not do and the table-as-Gantt idiom did awkwardly. The resolver computes column geometry once and aligns task bars and milestone markers to the same period tracks.
+`start` + `span` encode both offset and length — the thing proportional-width bars could not do and the table-as-Gantt idiom did awkwardly. The resolver computes column geometry once and aligns task bars, gridlines, and milestone markers to the same period tracks. Labels never wrap into too-small boxes; style definitions use truncate/shrink policies for task labels and extend/stagger/truncate policies for milestone labels. Timeline finish is curated: authors choose a named preset and may only make small local edits (`tone`, `borderWidth`, `shadow`), not arbitrary CSS-like styling.
 
 ### `<chart>` (reserved, deferred — Tier-2 native part)
 **Not implemented in v1.** Reserved so the grammar anticipates it and stays coherent. A `<chart>` will emit a native OOXML chart part with an embedded data model, not shapes.
@@ -489,12 +506,13 @@ The pressure test showed both authors picking different valid encodings. These a
 - **Lists** -> one mechanism: set the marker default with `list` on `<text>`, override per paragraph with `bullet` on `<p>`. Marker kinds (`bullet`, `number`, `dash`, `check`, `none`) are an extensible enum, never separate tags. There is no `<list>`/`<ol>`/`<ul>` element and no `<item>` — a list line is always a `<p>`. Infer `number` vs `bullet` from whether the content implies sequence (steps, ranked risks → `number`; unordered points → `bullet`).
 - **Cell emphasis** -> `bold`/`fill`/`color` on `<cell>`. **Not** a `<run>` wrapping the whole cell.
 - **Timelines / Gantts** -> the `<timeline>` composite, never hand-placed bars in `<free>` and never a table faking columns. One blessed form.
+- **Slide backgrounds** -> set `background` on `<deck>` for the deck default, and on `<slide>` only when that slide intentionally overrides it. Use a theme token for re-skinnable backgrounds, hex for fixed brand colors, and `image:path` for full-slide image backgrounds.
 
 ---
 
 ## 8. v1 Scope Boundary
 
-**In v1:** `<deck>`, `<theme>` (attr form), theme `typeScale`, `<defs>`/`<def>`/`<use>`, `<slide>`, `<stack>` (with anchor + styled-container attrs), `<grid>` (with styled-container attrs), `<free>`, `<text>` (with `role` + `list`), `<p>` (with paragraph-level `role`), `<run>`, `<image>` (with placeholder), `<shape>`, `<line>`, `<table>`/`<row>`/`<cell>` (with cell emphasis + styling), `<timeline>`/`<task>`/`<milestone>` (Tier-1 composite). Theme tokens + hex. Stack/grid/table/timeline resolvers, free passthrough, edge anchoring. Geometry validation (arithmetic) + overflow warning.
+**In v1:** `<deck>`, deck/slide `background`, `<theme>` (attr form), theme `typeScale`, `<defs>`/`<def>`/`<use>`, `<slide>`, `<stack>` (with anchor + styled-container attrs), `<grid>` (with styled-container attrs), `<free>`, `<text>` (with `role` + `list`), `<p>` (with paragraph-level `role`), `<run>`, `<image>` (with placeholder), `<shape>`, `<line>`, `<table>`/`<row>`/`<cell>` (with cell emphasis + styling), `<timeline>`/`<task>`/`<milestone>` (Tier-1 composite). Theme tokens + hex. Stack/grid/table/timeline resolvers, free passthrough, edge anchoring. Geometry validation (arithmetic) + overflow warning.
 
 **Deferred to later:** `<chart>` (Tier-2 native chart part — a dedicated engine milestone: ChartBuilder + chart part + relationship + embedded workbook), additional Tier-1 composites (process flow, pyramid, funnel, comparison card), transitions/animations, layout reflow / text restructuring, nested grids spanning edge cases, quote/code styled blocks.
 

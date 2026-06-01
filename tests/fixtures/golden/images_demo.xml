@@ -1,0 +1,9 @@
+<deck theme="default" size="16:9">
+  <slide layout="picture" flow="free">
+    <image placeholder="pic" src="tests/fixtures/images/test_picture.png" fit="cover" alt="Inherited picture"/>
+    <image src="tests/fixtures/images/test_picture.png" x="0.7in" y="0.7in" w="2.0in" h="1.4in" fit="cover" alt="Free cover picture"/>
+    <grid x="7.1in" y="0.7in" w="4.5in" h="2.0in" cols="2" rows="1" gap="0.15in">
+      <image src="tests/fixtures/images/test_picture.png" col="2" fit="stretch" alt="Grid stretch picture"/>
+    </grid>
+  </slide>
+</deck>

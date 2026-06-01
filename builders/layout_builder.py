@@ -32,6 +32,11 @@ LAYOUT_DEFINITIONS = {
         "reference_key": "blank",
         "name": "Blank",
     },
+    "picture": {
+        "index": 4,
+        "reference_key": "picture",
+        "name": "Picture",
+    },
 }
 
 for _layout in LAYOUT_DEFINITIONS.values():

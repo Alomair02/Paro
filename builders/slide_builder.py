@@ -10,6 +10,7 @@ from builders.shape_emitters import (
     emit_image,
     emit_line,
     emit_placeholder_text,
+    emit_slide_background,
     emit_table,
     emit_text_box,
 )
@@ -26,10 +27,12 @@ class SlideBuilder:
         content_types: ContentTypeRegistry,
         relationships: RelationshipRegistry,
         media_parts: dict[str, bytes] | None = None,
+        media_sources: dict[str, str] | None = None,
     ):
         self.content_types = content_types
         self.relationships = relationships
         self.media_parts = media_parts if media_parts is not None else {}
+        self.media_sources = media_sources if media_sources is not None else {}
 
     def build(self, slide_data: dict, part_path: str | None = None) -> str:
         """Build one slide part and register its layout relationship."""
@@ -43,12 +46,26 @@ class SlideBuilder:
             RelationshipRegistry.SLIDE_LAYOUT,
         )
 
-        slide_state = SlideState(part_path=part_path, media_parts=self.media_parts)
+        slide_state = SlideState(
+            part_path=part_path,
+            media_parts=self.media_parts,
+            media_sources=self.media_sources,
+        )
         root = make_root("p", "sld")
 
         c_sld = etree.SubElement(root, qn("p", "cSld"))
         if slide_data.get("name"):
             c_sld.set("name", slide_data["name"])
+
+        if slide_data.get("background"):
+            c_sld.append(
+                emit_slide_background(
+                    slide_data["background"],
+                    slide_state,
+                    self.relationships,
+                    self.content_types,
+                )
+            )
 
         sp_tree = make_sp_tree()
         c_sld.append(sp_tree)

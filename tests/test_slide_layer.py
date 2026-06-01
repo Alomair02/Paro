@@ -13,6 +13,7 @@ from builders.shape_emitters import (
     emit_image,
     emit_line,
     emit_placeholder_text,
+    emit_slide_background,
     emit_table,
     emit_text_box,
 )
@@ -148,6 +149,38 @@ class ShapeEmitterTests(unittest.TestCase):
         )
         self.assertIsNotNone(shape.find("p:spPr/a:ln/a:noFill", NSMAP))
         self.assertEqual(shape.find(".//a:t", NSMAP).text, "Accent")
+
+    def test_autoshape_roundrect_radius_fill_effects_emit_real_sppr(self):
+        state = SlideState("ppt/slides/slide1.xml")
+
+        shape = emit_autoshape(
+            {
+                "name": "Finished Bar",
+                "x": "1in",
+                "y": "1in",
+                "w": "2in",
+                "h": "0.3in",
+                "preset": "roundRect",
+                "radius": "3pt",
+                "fill": "accent1",
+                "fill_style": {
+                    "type": "gradient",
+                    "color": "accent1",
+                    "startTransforms": {"lumMod": 100000, "lumOff": 18000},
+                    "endTransforms": {"lumMod": 82000},
+                },
+                "line": {"color": "accent1", "width": "0.75pt"},
+                "effects": {"shadow": {"blur": "3pt", "dist": "1pt", "alpha": 12000}},
+            },
+            state,
+        )
+
+        gd = shape.find("p:spPr/a:prstGeom/a:avLst/a:gd", NSMAP)
+        self.assertIsNotNone(gd)
+        self.assertTrue(gd.get("fmla").startswith("val "))
+        self.assertIsNotNone(shape.find("p:spPr/a:gradFill", NSMAP))
+        self.assertEqual(shape.find("p:spPr/a:ln", NSMAP).get("w"), str(int(REFERENCE["units"]["emu_per"]["pt"] * 0.75)))
+        self.assertIsNotNone(shape.find("p:spPr/a:effectLst/a:outerShdw", NSMAP))
 
     def test_autoshape_fill_none_emits_no_fill(self):
         state = SlideState("ppt/slides/slide1.xml")
@@ -341,6 +374,130 @@ class ShapeEmitterTests(unittest.TestCase):
         self.assertEqual(rel.get("Type"), RelationshipRegistry.IMAGE)
         self.assertEqual(rel.get("Target"), "../media/image1.png")
 
+    def test_image_placeholder_omits_xfrm_and_sets_placeholder_metadata(self):
+        content_types = ContentTypeRegistry()
+        relationships = RelationshipRegistry()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            source = Path(tmpdir) / "photo.png"
+            source.write_bytes(PNG_BYTES)
+            state = SlideState("ppt/slides/slide1.xml")
+
+            pic = emit_image(
+                {
+                    "name": "Inherited Picture",
+                    "src": str(source),
+                    "idx": 1,
+                    "placeholder_type": "pic",
+                },
+                state,
+                relationships,
+                content_types,
+            )
+
+        ph = pic.find("p:nvPicPr/p:nvPr/p:ph", NSMAP)
+        self.assertEqual(ph.get("type"), "pic")
+        self.assertEqual(ph.get("idx"), "1")
+        self.assertIsNone(pic.find("p:spPr/a:xfrm", NSMAP))
+
+    def test_image_cover_crop_and_media_dedup_reuse_registered_part(self):
+        content_types = ContentTypeRegistry()
+        relationships = RelationshipRegistry()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            source = Path(tmpdir) / "photo.png"
+            source.write_bytes(PNG_BYTES)
+            state = SlideState("ppt/slides/slide1.xml")
+
+            first = emit_image(
+                {
+                    "name": "First",
+                    "src": str(source),
+                    "x": "1in",
+                    "y": "1in",
+                    "w": "2in",
+                    "h": "2in",
+                    "crop": {"l": 25000, "r": 25000},
+                },
+                state,
+                relationships,
+                content_types,
+            )
+            second = emit_image(
+                {
+                    "name": "Second",
+                    "src": str(source),
+                    "x": "4in",
+                    "y": "1in",
+                    "w": "2in",
+                    "h": "2in",
+                },
+                state,
+                relationships,
+                content_types,
+            )
+
+        self.assertEqual(len(state.media_parts), 1)
+        self.assertEqual(
+            first.find("p:blipFill/a:blip", NSMAP).get(qn("r", "embed")),
+            second.find("p:blipFill/a:blip", NSMAP).get(qn("r", "embed")),
+        )
+        src_rect = first.find("p:blipFill/a:srcRect", NSMAP)
+        self.assertEqual(src_rect.get("l"), "25000")
+        self.assertEqual(src_rect.get("r"), "25000")
+        self.assertEqual(len(rels_for(relationships, "ppt/slides/slide1.xml")), 1)
+
+    def test_slide_background_emits_solid_token_and_hex(self):
+        token_bg = emit_slide_background(
+            {"kind": "solid", "color": "accent5"},
+            SlideState("ppt/slides/slide1.xml"),
+            RelationshipRegistry(),
+            ContentTypeRegistry(),
+        )
+        hex_bg = emit_slide_background(
+            {"kind": "solid", "color": "#0F172A"},
+            SlideState("ppt/slides/slide1.xml"),
+            RelationshipRegistry(),
+            ContentTypeRegistry(),
+        )
+
+        self.assertEqual(token_bg.tag, qn("p", "bg"))
+        self.assertEqual(
+            token_bg.find("p:bgPr/a:solidFill/a:schemeClr", NSMAP).get("val"),
+            "accent5",
+        )
+        self.assertEqual(
+            hex_bg.find("p:bgPr/a:solidFill/a:srgbClr", NSMAP).get("val"),
+            "0F172A",
+        )
+
+    def test_slide_background_image_registers_media_relationship_and_content_type(self):
+        content_types = ContentTypeRegistry()
+        relationships = RelationshipRegistry()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            source = Path(tmpdir) / "cover.png"
+            source.write_bytes(PNG_BYTES)
+            state = SlideState("ppt/slides/slide1.xml")
+
+            bg = emit_slide_background(
+                {"kind": "image", "src": str(source)},
+                state,
+                relationships,
+                content_types,
+            )
+
+        self.assertEqual(
+            bg.find("p:bgPr/a:blipFill/a:blip", NSMAP).get(qn("r", "embed")),
+            "rId1",
+        )
+        self.assertEqual(state.media_parts["ppt/media/image1.png"], PNG_BYTES)
+        self.assertEqual(content_types._defaults["png"], "image/png")
+
+        rel = rels_for(relationships, "ppt/slides/slide1.xml")[0]
+        self.assertEqual(rel.get("Type"), RelationshipRegistry.IMAGE)
+        self.assertEqual(rel.get("Target"), "../media/image1.png")
+
 
 class SlideBuilderTests(unittest.TestCase):
     def test_slide_builder_emits_required_tree_relationships_ids_and_z_order(self):
@@ -407,6 +564,26 @@ class SlideBuilderTests(unittest.TestCase):
         self.assertEqual(
             content_types.overrides["ppt/slides/slide1.xml"],
             ContentTypeRegistry.SLIDE,
+        )
+
+    def test_slide_builder_places_background_before_shape_tree(self):
+        content_types = ContentTypeRegistry()
+        relationships = RelationshipRegistry()
+        slide_data = {
+            "index": 1,
+            "layout": "blank",
+            "background": {"kind": "solid", "color": "accent5"},
+            "shapes": [],
+        }
+
+        xml = SlideBuilder(content_types, relationships).build(slide_data)
+        root = parse_xml(xml)
+        c_sld = root.find("p:cSld", NSMAP)
+
+        self.assertEqual([child.tag for child in c_sld], [qn("p", "bg"), qn("p", "spTree")])
+        self.assertEqual(
+            c_sld.find("p:bg/p:bgPr/a:solidFill/a:schemeClr", NSMAP).get("val"),
+            "accent5",
         )
 
 

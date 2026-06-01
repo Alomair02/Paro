@@ -21,12 +21,12 @@ GEOMETRY_ATTRS = {"x", "y", "w", "h", "rot"}
 TYPE_SCALE_ROLES = set(REFERENCE["default_theme"]["typeScale"])
 
 ALLOWED_ATTRS = {
-    "deck": {"theme", "size", "font"},
+    "deck": {"theme", "size", "font", "background"},
     "theme": THEME_ATTRS,
     "defs": set(),
     "def": {"name", "auto"},
     "use": {"ref"},
-    "slide": {"layout", "flow", "pad", "gap"},
+    "slide": {"layout", "flow", "pad", "gap", "background"},
     "stack": {
         "dir",
         "gap",
@@ -109,8 +109,11 @@ ALLOWED_ATTRS = {
     | GEOMETRY_ATTRS,
     "row": set(),
     "cell": {"colspan", "rowspan", "align", "valign", "fill", "color", "bold", "italic"},
-    "timeline": {"style", "periods", "labels"} | GRID_PLACEMENT_ATTRS | GEOMETRY_ATTRS,
-    "task": {"label", "start", "span", "fill"},
+    "timeline": {"style", "periods", "unit", "labels", "finish", "borderWidth", "shadow"}
+    | GRID_PLACEMENT_ATTRS
+    | GEOMETRY_ATTRS,
+    "group": {"label"},
+    "task": {"label", "start", "span", "tone"},
     "milestone": {"label", "at"},
 }
 
@@ -121,6 +124,7 @@ REQUIRED_ATTRS = {
     "free": {"x", "y", "w", "h"},
     "image": {"src"},
     "timeline": {"periods"},
+    "group": {"label"},
     "task": {"label", "start"},
     "milestone": {"label", "at"},
 }
@@ -161,7 +165,8 @@ ALLOWED_CHILDREN = {
     "table": {"row"},
     "row": {"cell"},
     "cell": {"p"},
-    "timeline": {"task", "milestone"},
+    "timeline": {"group", "task", "milestone"},
+    "group": {"task"},
 }
 
 
@@ -215,6 +220,7 @@ class DSLParser:
             theme=deck_theme,
             size=root.get("size", "16:9"),
             font=root.get("font"),
+            background=root.get("background"),
             inline_theme=inline_theme,
             slides=slides,
             defs=defs,

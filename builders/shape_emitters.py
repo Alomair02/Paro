@@ -11,6 +11,8 @@ from builders.common import REFERENCE, relationship_target
 from core.content_type_reg import ContentTypeRegistry
 from core.relationship_reg import RelationshipRegistry
 from core.xml_builder import (
+    make_effect_list,
+    make_gradient_fill,
     make_ln,
     make_no_fill,
     make_paragraph,
@@ -52,6 +54,7 @@ class SlideState:
 
     part_path: str
     media_parts: dict[str, bytes] = field(default_factory=dict)
+    media_sources: dict[str, str] = field(default_factory=dict)
     _last_shape_id: int = field(
         default_factory=lambda: REFERENCE["constraints"]["shape_id_group_tree"]
     )
@@ -164,23 +167,9 @@ def emit_image(
 ) -> etree._Element:
     """Emit a picture shape and register its slide relationship and media part."""
     shape_id = slide_state.next_id()
-    source_path = Path(shape_data.get("src", shape_data.get("path", "")))
-    if not source_path:
-        raise ValueError("Image shape requires a src or path")
-
-    extension = source_path.suffix.lower().lstrip(".")
-    if extension not in IMAGE_CONTENT_TYPES:
-        raise ValueError(f"Unsupported image extension: {extension}")
-
-    media_part_path = slide_state.next_media_path(extension)
-    slide_state.media_parts[media_part_path] = source_path.read_bytes()
-    ct_registry.add_default(extension, IMAGE_CONTENT_TYPES[extension])
-
-    rid = rel_registry.add(
-        slide_state.part_path,
-        relationship_target(slide_state.part_path, media_part_path),
-        RelationshipRegistry.IMAGE,
-    )
+    source_path = _image_source_path(shape_data)
+    rid = _register_image_part(source_path, slide_state, rel_registry, ct_registry)
+    ph_type = shape_data.get("placeholder_type", shape_data.get("ph_type"))
 
     pic = etree.Element(qn("p", "pic"))
     nv_pic_pr = etree.SubElement(pic, qn("p", "nvPicPr"))
@@ -188,22 +177,58 @@ def emit_image(
         nv_pic_pr,
         shape_id,
         shape_data.get("name", f"Picture {shape_id}"),
-        descr=str(source_path.name),
+        descr=str(shape_data.get("alt", source_path.name)),
     )
     c_nv_pic_pr = etree.SubElement(nv_pic_pr, qn("p", "cNvPicPr"))
     etree.SubElement(c_nv_pic_pr, qn("a", "picLocks"), noChangeAspect="1")
-    etree.SubElement(nv_pic_pr, qn("p", "nvPr"))
+    nv_pr = etree.SubElement(nv_pic_pr, qn("p", "nvPr"))
+    if ph_type:
+        ph = etree.SubElement(nv_pr, qn("p", "ph"))
+        ph.set("idx", str(shape_data["idx"]))
+        ph.set("type", ph_type)
 
     blip_fill = etree.SubElement(pic, qn("p", "blipFill"))
     blip = etree.SubElement(blip_fill, qn("a", "blip"))
     blip.set(qn("r", "embed"), rid)
+    _append_image_crop(blip_fill, shape_data.get("crop"))
     stretch = etree.SubElement(blip_fill, qn("a", "stretch"))
     etree.SubElement(stretch, qn("a", "fillRect"))
 
     sp_pr = etree.SubElement(pic, qn("p", "spPr"))
-    sp_pr.append(_xfrm_from_shape(shape_data))
-    sp_pr.append(make_prst_geom("rect"))
+    if _has_any_geometry(shape_data):
+        sp_pr.append(_xfrm_from_shape(shape_data))
+        sp_pr.append(make_prst_geom("rect"))
+    elif not ph_type:
+        raise ValueError("Image geometry requires x, y, w/width, and h/height unless it fills a placeholder")
     return pic
+
+
+def emit_slide_background(
+    background_data: dict,
+    slide_state: SlideState,
+    rel_registry: RelationshipRegistry,
+    ct_registry: ContentTypeRegistry,
+) -> etree._Element:
+    """Emit a slide p:bg element from resolved solid or image background data."""
+    bg = etree.Element(qn("p", "bg"))
+    bg_pr = etree.SubElement(bg, qn("p", "bgPr"))
+    kind = background_data.get("kind", "solid")
+
+    if kind == "solid":
+        bg_pr.append(make_solid_fill(background_data["color"]))
+        return bg
+
+    if kind == "image":
+        source_path = _image_source_path(background_data)
+        rid = _register_image_part(source_path, slide_state, rel_registry, ct_registry)
+        blip_fill = etree.SubElement(bg_pr, qn("a", "blipFill"))
+        blip = etree.SubElement(blip_fill, qn("a", "blip"))
+        blip.set(qn("r", "embed"), rid)
+        stretch = etree.SubElement(blip_fill, qn("a", "stretch"))
+        etree.SubElement(stretch, qn("a", "fillRect"))
+        return bg
+
+    raise ValueError(f"Unsupported slide background kind: {kind}")
 
 
 def emit_autoshape(
@@ -226,13 +251,12 @@ def emit_autoshape(
 
     sp_pr = etree.SubElement(sp, qn("p", "spPr"))
     sp_pr.append(_xfrm_from_shape(shape_data))
-    sp_pr.append(make_prst_geom(shape_data.get("preset", "rect")))
-    if shape_data.get("fill") == "none":
-        sp_pr.append(make_no_fill())
-    else:
-        sp_pr.append(make_solid_fill(shape_data.get("fill", "accent1")))
+    sp_pr.append(_prst_geom_from_shape(shape_data))
+    sp_pr.append(_fill_from_shape(shape_data))
     if "line" in shape_data:
         sp_pr.append(_line_from_shape(shape_data["line"]))
+    if shape_data.get("effects"):
+        sp_pr.append(_effects_from_shape(shape_data["effects"]))
 
     if _has_text(shape_data):
         sp.append(_text_body_from_shape(shape_data, slide_state, rel_registry))
@@ -464,6 +488,38 @@ def _xfrm_from_shape(shape_data: dict) -> etree._Element:
     return make_xfrm(x, y, cx, cy, _rotation_from_shape(shape_data))
 
 
+def _prst_geom_from_shape(shape_data: dict) -> etree._Element:
+    preset = shape_data.get("preset", "rect")
+    adjustments = {}
+    if preset == "roundRect" and shape_data.get("radius") not in (None, "", 0, "0"):
+        _, _, width, height = _geometry_from_shape(shape_data)
+        radius = _to_emu(shape_data["radius"])
+        shortest = max(1, min(width, height))
+        adjustments["adj"] = max(0, min(50000, round(radius / shortest * 100000)))
+    return make_prst_geom(preset, adjustments)
+
+
+def _fill_from_shape(shape_data: dict) -> etree._Element:
+    fill_style = shape_data.get("fill_style")
+    if fill_style:
+        kind = fill_style.get("type", "solid")
+        color = fill_style.get("color", shape_data.get("fill", "accent1"))
+        if kind == "none":
+            return make_no_fill()
+        if kind == "gradient":
+            return make_gradient_fill(
+                color,
+                fill_style.get("startTransforms"),
+                fill_style.get("endTransforms"),
+                int(fill_style.get("angle", 5400000)),
+            )
+        return make_solid_fill(color, fill_style.get("transforms"))
+
+    if shape_data.get("fill") == "none":
+        return make_no_fill()
+    return make_solid_fill(shape_data.get("fill", "accent1"))
+
+
 def _geometry_from_shape(shape_data: dict) -> tuple[int, int, int, int]:
     x = shape_data.get("x")
     y = shape_data.get("y")
@@ -641,6 +697,50 @@ def _cap_value(value: str) -> str:
     return _CAP_MAP[value]
 
 
+def _image_source_path(shape_data: dict) -> Path:
+    source = shape_data.get("src", shape_data.get("path"))
+    if not source:
+        raise ValueError("Image shape requires a src or path")
+    return Path(source)
+
+
+def _register_image_part(
+    source_path: Path,
+    slide_state: SlideState,
+    rel_registry: RelationshipRegistry,
+    ct_registry: ContentTypeRegistry,
+) -> str:
+    extension = source_path.suffix.lower().lstrip(".")
+    if extension not in IMAGE_CONTENT_TYPES:
+        raise ValueError(f"Unsupported image extension: {extension}")
+
+    source_key = str(source_path.expanduser().resolve(strict=False))
+    media_part_path = slide_state.media_sources.get(source_key)
+    if media_part_path is None:
+        media_part_path = slide_state.next_media_path(extension)
+        slide_state.media_parts[media_part_path] = source_path.read_bytes()
+        slide_state.media_sources[source_key] = media_part_path
+    ct_registry.add_default(extension, IMAGE_CONTENT_TYPES[extension])
+
+    return rel_registry.add(
+        slide_state.part_path,
+        relationship_target(slide_state.part_path, media_part_path),
+        RelationshipRegistry.IMAGE,
+    )
+
+
+def _append_image_crop(blip_fill: etree._Element, crop: dict | None):
+    if not crop:
+        return
+    attrs = {
+        key: str(int(value))
+        for key, value in crop.items()
+        if key in {"l", "t", "r", "b"} and int(value)
+    }
+    if attrs:
+        etree.SubElement(blip_fill, qn("a", "srcRect"), **attrs)
+
+
 def _line_from_shape(line_data) -> etree._Element:
     if line_data is False or line_data is None:
         return make_ln(0)
@@ -654,7 +754,19 @@ def _line_from_shape(line_data) -> etree._Element:
         line_data.get("color"),
         dash=_dash_value(line_data.get("dash", "solid")),
         cap=_cap_value(line_data.get("cap", "flat")),
+        color_transforms=line_data.get("colorTransforms"),
     )
+
+
+def _effects_from_shape(effects_data: dict) -> etree._Element:
+    shadow = effects_data.get("shadow")
+    if shadow:
+        shadow = {
+            **shadow,
+            "blurRad": _to_emu(shadow.get("blur", shadow.get("blurRad", 0))),
+            "dist": _to_emu(shadow.get("dist", 0)),
+        }
+    return make_effect_list(shadow)
 
 
 def _rotation_from_shape(shape_data: dict) -> int:

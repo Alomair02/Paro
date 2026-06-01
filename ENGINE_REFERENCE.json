@@ -212,6 +212,13 @@
         { "idx": 0, "type": "title", "off": { "x": 838200, "y": 365125 }, "ext": { "cx": 10515600, "cy": 1325563 } }
       ]
     },
+    "picture": {
+      "layout_type": "picTx",
+      "placeholders": [
+        { "idx": 0, "type": "title", "off": { "x": 838200, "y": 365125 }, "ext": { "cx": 10515600, "cy": 1325563 } },
+        { "idx": 1, "type": "pic",   "off": { "x": 838200, "y": 1825625 }, "ext": { "cx": 10515600, "cy": 4351338 } }
+      ]
+    },
     "twoContent": {
       "layout_type": "twoObj",
       "placeholders": [

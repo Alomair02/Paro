@@ -6,9 +6,12 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from PIL import Image
+
 from builders.common import REFERENCE
 from transpiler.ast import Box, DeckAst, Node, ResolvedBlock, ResolvedSlide
-from transpiler.registries import LayoutRegistry, ShapeLibrary, ThemeRegistry
+from transpiler.registries import LayoutRegistry, ShapeLibrary, ThemeRegistry, TimelineStyleRegistry
+from transpiler.text_metrics import TextMeasurer
 from utils.converter import UnitConverter
 
 
@@ -39,10 +42,13 @@ class LayoutResolver:
         theme_registry: ThemeRegistry | None = None,
         layout_registry: LayoutRegistry | None = None,
         shape_library: ShapeLibrary | None = None,
+        timeline_style_registry: TimelineStyleRegistry | None = None,
     ):
         self.theme_registry = theme_registry or ThemeRegistry()
         self.layout_registry = layout_registry or LayoutRegistry()
         self.shape_library = shape_library or ShapeLibrary()
+        self.timeline_style_registry = timeline_style_registry or TimelineStyleRegistry()
+        self.text_measurer = TextMeasurer()
         self._resolved_slide: ResolvedSlide | None = None
         self._slide_box: Box | None = None
         self._layout: dict[str, Any] | None = None
@@ -67,6 +73,9 @@ class LayoutResolver:
                 "name": f"Slide {slide_ast.index}",
                 "shapes": [],
             }
+            background = slide_ast.attrs.get("background", deck.background)
+            if background:
+                slide_data["background"] = self._resolve_background(background)
             self._resolved_slide = ResolvedSlide(slide_data=slide_data)
             root_node = Node(
                 slide_ast.flow,
@@ -210,18 +219,41 @@ class LayoutResolver:
         if "src" not in node.attrs:
             raise ValueError("<image> requires src")
         image_attrs = self._resolve_image_attrs(node.attrs)
-        if node.attrs.get("placeholder") and not self._has_explicit_box(node):
-            raise ValueError("Image placeholders are not supported by the current engine without geometry")
+        fit = image_attrs.get("fit", "contain")
+        if fit not in {"contain", "cover", "stretch"}:
+            raise ValueError(f"Unsupported image fit mode: {fit}")
+
+        placeholder = node.attrs.get("placeholder")
+        shape = {
+            "type": "image",
+            "name": image_attrs.get("alt", Path(image_attrs["src"]).name),
+            "src": image_attrs["src"],
+            "fit": fit,
+        }
+
+        if placeholder:
+            ph = self._resolve_placeholder(placeholder, node.attrs.get("idx"))
+            shape["idx"] = ph["idx"]
+            shape["placeholder_type"] = ph["type"]
+            ph_box = Box(ph["off"]["x"], ph["off"]["y"], ph["ext"]["cx"], ph["ext"]["cy"])
+            self._resolved_slide.placeholder_refs.append(
+                {"placeholder": placeholder, "idx": node.attrs.get("idx"), "layout": self._layout["name"]}
+            )
+            if not self._has_explicit_box(node):
+                _, crop = self._fit_image_box(image_attrs["src"], ph_box, fit)
+                if crop:
+                    shape["crop"] = crop
+                self._append_shape(shape)
+                self._record_block("image", ph_box, parent_kind, node.attrs, content=shape)
+                return
+
         actual_box = self._box_for_node(node, box)
-        self._append_shape(
-            {
-                "type": "image",
-                "name": image_attrs.get("alt", Path(image_attrs["src"]).name),
-                "src": image_attrs["src"],
-                **actual_box.as_shape_geometry(),
-            }
-        )
-        self._record_block("image", actual_box, parent_kind, node.attrs)
+        fitted_box, crop = self._fit_image_box(image_attrs["src"], actual_box, fit)
+        shape.update(fitted_box.as_shape_geometry())
+        if crop:
+            shape["crop"] = crop
+        self._append_shape(shape)
+        self._record_block("image", fitted_box, parent_kind, node.attrs, content=shape)
 
     def _resolve_shape(self, node: Node, box: Box, parent_kind: str):
         actual_box = self._box_for_node(node, box)
@@ -348,98 +380,622 @@ class LayoutResolver:
     def _resolve_timeline(self, node: Node, box: Box, parent_kind: str):
         actual_box = self._box_for_node(node, box)
         periods = int(node.attrs["periods"])
-        tasks = [child for child in node.children if child.kind == "task"]
-        milestones = [child for child in node.children if child.kind == "milestone"]
+        if periods < 1:
+            raise ValueError("<timeline> periods must be at least 1")
+
+        style = self.timeline_style_registry.get(node.attrs.get("style"))
+        if style.get("mechanism") != "bars-in-columns":
+            raise ValueError(f"Unsupported timeline mechanism: {style.get('mechanism')}")
+
+        style = self._timeline_style_with_finish(node, style)
+        self._resolve_timeline_bars_in_columns(node, actual_box, periods, style)
+        self._record_block("timeline", actual_box, parent_kind, node.attrs)
+
+    def _timeline_style_with_finish(self, node: Node, style: dict[str, Any]) -> dict[str, Any]:
+        style = dict(style)
+        finish_name = node.attrs.get("finish", style.get("finish", "flat"))
+        style["_finishName"] = finish_name
+        style["_finish"] = self.timeline_style_registry.get_finish(finish_name)
+        if node.attrs.get("borderWidth"):
+            style["_borderWidth"] = node.attrs["borderWidth"]
+        if "shadow" in node.attrs:
+            style["_shadow"] = self._is_true(node.attrs["shadow"])
+        return style
+
+    def _resolve_timeline_bars_in_columns(
+        self,
+        node: Node,
+        actual_box: Box,
+        periods: int,
+        style: dict[str, Any],
+    ):
         labels = self._timeline_labels(node, periods)
-        label_w = min(self._unit("1.8in", actual_box.w), round(actual_box.w * 0.25))
-        header_h = min(self._unit("0.36in", actual_box.h), round(actual_box.h * 0.18))
-        period_w = (actual_box.w - label_w) / periods
-        row_count = max(1, len(tasks))
-        row_h = (actual_box.h - header_h) / row_count
+        rows = self._timeline_rows(node, style)
+        milestones = [child for child in node.children if child.kind == "milestone"]
 
-        for index, label in enumerate(labels):
-            label_box = Box(round(actual_box.x + label_w + index * period_w), actual_box.y, round(period_w), header_h)
-            label_shape = {
-                "type": "text_box",
-                "name": "Timeline Period",
-                **label_box.as_shape_geometry(),
-                "paragraphs": [{"text": label, "align": "ctr"}],
-            }
-            self._append_shape(label_shape)
-            self._record_block("text", label_box, "timeline", node.attrs, content=label_shape)
-            self._resolve_line(
-                Node(
-                    "line",
-                    {
-                        "color": "lt2",
-                        "width": "0.5pt",
-                        "x1": str(label_w + index * period_w) + "emu",
-                        "y1": "0emu",
-                        "x2": str(label_w + index * period_w) + "emu",
-                        "y2": str(actual_box.h) + "emu",
-                    },
-                ),
-                actual_box,
-                "timeline",
-            )
+        gutter = self._timeline_gutter(actual_box, style)
+        header_h = min(self._unit(style.get("headerHeight", "0"), actual_box.h, 0), actual_box.h)
+        plot_x = actual_box.x + gutter
+        plot_y = actual_box.y + header_h
+        plot_w = max(1, actual_box.w - gutter)
+        plot_h = max(0, actual_box.h - header_h)
+        period_w = plot_w / periods
+        column_edges = [round(plot_x + index * period_w) for index in range(periods + 1)]
+        row_h = self._timeline_row_height(style, plot_h, max(1, len(rows)))
+        task_band_h = min(plot_h, row_h * len(rows))
+        milestone_track_h = self._timeline_milestone_track_height(row_h, style) if milestones else 0
+        active_plot_h = min(plot_h, task_band_h + milestone_track_h)
 
-        for row_index, task in enumerate(tasks):
-            y = round(actual_box.y + header_h + row_index * row_h)
-            label_box = Box(actual_box.x, y, label_w, round(row_h))
-            task_label_shape = {
-                "type": "text_box",
-                "name": "Timeline Task Label",
-                **label_box.as_shape_geometry(),
-                "paragraphs": [{"text": task.attrs["label"]}],
-            }
-            self._append_shape(task_label_shape)
-            self._record_block("text", label_box, "timeline", task.attrs, content=task_label_shape)
-            start = int(task.attrs["start"])
-            span = int(task.attrs.get("span", 1))
-            bar_box = Box(
-                round(actual_box.x + label_w + (start - 1) * period_w),
-                y + round(row_h * 0.25),
-                round(span * period_w),
-                max(round(row_h * 0.5), self._unit("0.14in", actual_box.h)),
-            )
-            self._append_shape(
-                {
-                    "type": "autoshape",
-                    "name": f"Timeline Task {task.attrs['label']}",
-                    "preset": "roundRect",
-                    "fill": task.attrs.get("fill", "accent1"),
-                    "line": False,
-                    **bar_box.as_shape_geometry(),
-                }
-            )
+        self._emit_timeline_header(actual_box, header_h, column_edges, labels)
+        if style.get("showGrid"):
+            self._emit_timeline_grid(actual_box, plot_y, active_plot_h or plot_h, column_edges, style)
+
+        task_index = 0
+        for row_index, row in enumerate(rows):
+            row_box = Box(actual_box.x, round(plot_y + row_index * row_h), actual_box.w, round(row_h))
+            if row["kind"] == "group":
+                self._emit_timeline_group_header(row["label"], row_box, style)
+                continue
+            if row["kind"] != "task":
+                continue
+
+            task = row["task"]
+            task_color = self._timeline_task_tone(task, row, task_index, style)
+            if style.get("labelPlacement") == "gutter" and gutter > 0:
+                label_box = Box(actual_box.x, row_box.y, gutter, row_box.h)
+                label_shape = self._timeline_text_shape(
+                    "Timeline Task Label",
+                    label_box,
+                    task.attrs["label"],
+                    role="bodySmall",
+                    align="l",
+                    overflow=style.get("labelOverflow", "truncate"),
+                )
+                self._append_shape(label_shape)
+                self._record_block("text", label_box, "timeline", task.attrs, content=label_shape)
+
+            bar_box = self._timeline_task_bar_box(task, row_box, column_edges, style)
+            bar_shape = self._timeline_task_bar_shape(task, bar_box, task_color, style)
+            self._append_shape(bar_shape)
             self._record_block("timeline_task", bar_box, "timeline", task.attrs)
 
-        marker_size = self._unit("0.14in", actual_box.w)
+            if style.get("labelPlacement") == "on-bar":
+                label_shape = self._timeline_text_shape(
+                    "Timeline Task Label",
+                    bar_box,
+                    task.attrs["label"],
+                    role="bodySmall",
+                    align="ctr",
+                    overflow=style.get("labelOverflow", "truncate"),
+                    color="lt1",
+                )
+                self._append_shape(label_shape)
+                self._record_block("text", bar_box, "timeline", task.attrs, content=label_shape)
+            task_index += 1
+
+        self._emit_timeline_milestones(
+            actual_box,
+            plot_y,
+            plot_h,
+            row_h,
+            task_band_h,
+            column_edges,
+            milestones,
+            style,
+        )
+
+    def _timeline_gutter(self, box: Box, style: dict[str, Any]) -> int:
+        gutter = max(
+            round(box.w * float(style.get("gutterRatio", 0))),
+            self._unit(style.get("gutterMin", "0"), box.w, 0),
+        )
+        return min(gutter, max(0, box.w - 1))
+
+    def _timeline_row_height(self, style: dict[str, Any], plot_h: int, row_count: int) -> int:
+        minimum = self._unit(style.get("rowHeightMin", "0"), plot_h, 0)
+        row_height = style.get("rowHeight", "auto")
+        if row_height == "auto":
+            return max(minimum, round(plot_h / max(1, row_count)))
+        return max(minimum, self._unit(row_height, plot_h, minimum))
+
+    def _timeline_milestone_track_height(self, row_h: int, style: dict[str, Any]) -> int:
+        marker_size = self._timeline_milestone_marker_size(row_h, style)
+        label_h = self._timeline_label_height("caption")
+        gap = self._unit("0.06in", row_h, 0)
+        placement = style.get("milestoneLabelPlacement", "below")
+        if placement == "inline":
+            return max(marker_size, label_h) + 2 * gap
+        return marker_size + label_h + 3 * gap
+
+    def _timeline_rows(self, node: Node, style: dict[str, Any]) -> list[dict[str, Any]]:
+        has_groups = any(child.kind == "group" for child in node.children)
+        render_groups = bool(style.get("renderGroups")) and has_groups
+        rows: list[dict[str, Any]] = []
+        group_index = 0
+
+        for child in node.children:
+            if child.kind == "group":
+                if render_groups:
+                    rows.append({"kind": "group", "label": child.attrs["label"], "group_index": group_index})
+                for task in child.children:
+                    rows.append(
+                        {
+                            "kind": "task",
+                            "task": task,
+                            "group_label": child.attrs["label"],
+                            "group_index": group_index,
+                        }
+                    )
+                group_index += 1
+            elif child.kind == "task":
+                rows.append({"kind": "task", "task": child, "group_label": None, "group_index": None})
+
+        return rows or [{"kind": "empty"}]
+
+    def _emit_timeline_header(
+        self,
+        box: Box,
+        header_h: int,
+        column_edges: list[int],
+        labels: list[str],
+    ):
+        if header_h <= 0:
+            return
+        for index, label in enumerate(labels):
+            label_box = Box(
+                column_edges[index],
+                box.y,
+                max(1, column_edges[index + 1] - column_edges[index]),
+                header_h,
+            )
+            label_shape = self._timeline_text_shape(
+                "Timeline Period",
+                label_box,
+                label,
+                role="caption",
+                align="ctr",
+                overflow="truncate",
+            )
+            self._append_shape(label_shape)
+            self._record_block("text", label_box, "timeline", {}, content=label_shape)
+
+    def _emit_timeline_grid(
+        self,
+        box: Box,
+        plot_y: int,
+        plot_h: int,
+        column_edges: list[int],
+        style: dict[str, Any],
+    ):
+        for x in column_edges:
+            line_shape = {
+                "type": "line",
+                "name": "Timeline Gridline",
+                "x1": x,
+                "y1": plot_y,
+                "x2": x,
+                "y2": plot_y + plot_h,
+                "color": style.get("gridColor", "dk2"),
+                "width": self._unit(style.get("gridWidth", "0.5pt"), box.w, 0),
+            }
+            self._append_shape(line_shape)
+            self._record_block("line", Box(x, plot_y, 0, plot_h), "timeline", {})
+
+    def _emit_timeline_group_header(self, label: str, row_box: Box, style: dict[str, Any]):
+        if style.get("groupHeaderStyle") == "band":
+            band = {
+                "type": "autoshape",
+                "name": f"Timeline Group {label}",
+                "preset": "rect",
+                "fill": "lt2",
+                "line": False,
+                **row_box.as_shape_geometry(),
+            }
+            self._append_shape(band)
+            self._record_block("timeline_group", row_box, "timeline", {"label": label})
+
+        if style.get("groupHeaderStyle") in {"band", "label"}:
+            label_shape = self._timeline_text_shape(
+                "Timeline Group Label",
+                row_box,
+                label,
+                role="bodySmall",
+                align="l",
+                overflow="truncate",
+                bold=True,
+            )
+            self._append_shape(label_shape)
+            self._record_block("text", row_box, "timeline", {"label": label}, content=label_shape)
+
+    def _timeline_task_bar_box(
+        self,
+        task: Node,
+        row_box: Box,
+        column_edges: list[int],
+        style: dict[str, Any],
+    ) -> Box:
+        start = int(task.attrs["start"])
+        span = int(task.attrs.get("span", 1))
+        start = max(1, min(start, len(column_edges) - 1))
+        end = max(start, min(start + max(1, span) - 1, len(column_edges) - 1))
+        left = column_edges[start - 1]
+        right = column_edges[end]
+        inset = min(
+            self._unit(style.get("barInset", "0"), row_box.w, 0),
+            max(0, (right - left) // 2),
+        )
+        bar_h = max(1, round(row_box.h * float(style.get("barHeightRatio", 0.55))))
+        y = row_box.y + round((row_box.h - bar_h) / 2)
+        return Box(left + inset, y, max(1, right - left - 2 * inset), bar_h)
+
+    def _timeline_task_bar_shape(
+        self,
+        task: Node,
+        bar_box: Box,
+        task_color: str,
+        style: dict[str, Any],
+    ) -> dict[str, Any]:
+        radius = self._timeline_finish_radius(style)
+        shape = {
+            "type": "autoshape",
+            "name": f"Timeline Task {task.attrs['label']}",
+            "preset": "roundRect" if self._unit(radius, min(bar_box.w, bar_box.h), 0) else "rect",
+            "radius": radius,
+            "fill": task_color,
+            "fill_style": self._timeline_finish_fill_style(style, task_color),
+            "line": self._timeline_finish_line(style, task_color),
+            **bar_box.as_shape_geometry(),
+        }
+        effects = self._timeline_finish_effects(style)
+        if effects:
+            shape["effects"] = effects
+        return shape
+
+    def _timeline_finish_radius(self, style: dict[str, Any]) -> str:
+        finish = style.get("_finish", {})
+        return finish.get("cornerRadius", style.get("barRadius", "0"))
+
+    def _timeline_finish_fill_style(self, style: dict[str, Any], task_color: str) -> dict[str, Any]:
+        fill = dict(style.get("_finish", {}).get("fill", {"type": "solid"}))
+        fill["color"] = task_color
+        return fill
+
+    def _timeline_finish_line(self, style: dict[str, Any], task_color: str):
+        finish = style.get("_finish", {})
+        border = dict(finish.get("border") or {})
+        width_override = style.get("_borderWidth")
+        enabled = bool(border.get("enabled")) or bool(width_override)
+        if not enabled:
+            return False
+
+        color = border.get("color", "dk2")
+        if color == "tone":
+            color = task_color
+        return {
+            "color": color,
+            "width": width_override or border.get("width", "0.75pt"),
+            "colorTransforms": border.get("colorTransforms"),
+        }
+
+    def _timeline_finish_effects(self, style: dict[str, Any]) -> dict[str, Any] | None:
+        finish = style.get("_finish", {})
+        shadow = finish.get("shadow")
+        if style.get("_shadow") is False:
+            return None
+        if style.get("_shadow") is True and not shadow:
+            shadow = {"blur": "2.5pt", "dist": "1pt", "dir": 2700000, "alpha": 14000}
+        if not shadow:
+            return None
+        return {"shadow": shadow}
+
+    def _timeline_task_tone(
+        self,
+        task: Node,
+        row: dict[str, Any],
+        task_index: int,
+        style: dict[str, Any],
+    ) -> str:
+        if task.attrs.get("tone"):
+            return task.attrs["tone"]
+
+        tones = style.get("defaultTones") or ["accent1"]
+        mode = style.get("paletteMode", "cycle")
+        if mode == "uniform":
+            return tones[0]
+        if mode == "by-group" and row.get("group_index") is not None:
+            return tones[int(row["group_index"]) % len(tones)]
+        return tones[task_index % len(tones)]
+
+    def _emit_timeline_milestones(
+        self,
+        box: Box,
+        plot_y: int,
+        plot_h: int,
+        row_h: int,
+        task_band_h: int,
+        column_edges: list[int],
+        milestones: list[Node],
+        style: dict[str, Any],
+    ):
+        if not milestones:
+            return
+        marker_size = self._timeline_milestone_marker_size(row_h, style)
+        gap = self._unit("0.06in", box.h, 0)
+        label_h = self._timeline_label_height("caption")
+        placement = style.get("milestoneLabelPlacement", "below")
+        milestone_y = plot_y + task_band_h + gap
+        if placement == "above":
+            marker_y = milestone_y + label_h + gap
+        else:
+            marker_y = milestone_y
+        max_marker_y = plot_y + plot_h - marker_size
+        if placement in {"above", "below"}:
+            max_marker_y -= label_h + gap
+        marker_y = max(plot_y, min(round(marker_y), max_marker_y))
+        label_boxes: list[Box] = []
+
         for milestone in milestones:
             at = int(milestone.attrs["at"])
-            x = round(actual_box.x + label_w + (at - 0.5) * period_w - marker_size / 2)
-            y = actual_box.y + header_h // 2
-            marker_box = Box(x, y, marker_size, marker_size)
-            self._append_shape(
-                {
-                    "type": "autoshape",
-                    "name": f"Timeline Milestone {milestone.attrs['label']}",
-                    "preset": "diamond",
-                    "fill": "accent3",
-                    "line": False,
-                    **marker_box.as_shape_geometry(),
-                }
+            at = max(1, min(at, len(column_edges) - 1))
+            marker_center_x = round((column_edges[at - 1] + column_edges[at]) / 2)
+            marker_box = Box(
+                round(marker_center_x - marker_size / 2),
+                marker_y,
+                marker_size,
+                marker_size,
             )
-            text_box = Box(x - marker_size * 2, y + marker_size, marker_size * 5, self._unit("0.25in", actual_box.h))
-            milestone_label_shape = {
-                "type": "text_box",
-                "name": "Timeline Milestone Label",
-                **text_box.as_shape_geometry(),
-                "paragraphs": [{"text": milestone.attrs["label"], "align": "ctr"}],
+            marker_shape = {
+                "type": "autoshape",
+                "name": f"Timeline Milestone {milestone.attrs['label']}",
+                "preset": self._milestone_preset(style.get("milestoneMarker", "diamond")),
+                "fill": "accent3",
+                "line": False,
+                **marker_box.as_shape_geometry(),
             }
+            self._append_shape(marker_shape)
+            self._record_block("timeline_milestone", marker_box, "timeline", milestone.attrs)
+
+            text_box = self._milestone_label_box(
+                milestone.attrs["label"],
+                marker_box,
+                box,
+                max(1, column_edges[at] - column_edges[at - 1]),
+                style,
+                label_boxes,
+            )
+            label_boxes.append(text_box)
+            milestone_label_shape = self._timeline_text_shape(
+                "Timeline Milestone Label",
+                text_box,
+                milestone.attrs["label"],
+                role="caption",
+                align="ctr",
+                overflow=style.get("milestoneLabelOverflow", "extend"),
+            )
             self._append_shape(milestone_label_shape)
             self._record_block("text", text_box, "timeline", milestone.attrs, content=milestone_label_shape)
-        self._record_block("timeline", actual_box, parent_kind, node.attrs)
+
+    def _timeline_milestone_marker_size(self, row_h: int, style: dict[str, Any]) -> int:
+        return max(
+            1,
+            min(
+                round(row_h * float(style.get("barHeightRatio", 0.55))),
+                self._unit("0.18in", self._slide_box.w if self._slide_box else row_h),
+            ),
+        )
+
+    def _milestone_preset(self, marker: str) -> str:
+        return {
+            "diamond": "diamond",
+            "circle": "ellipse",
+            "triangle": "triangle",
+            "flag": "flag",
+        }.get(marker, "diamond")
+
+    def _milestone_label_box(
+        self,
+        label: str,
+        marker_box: Box,
+        timeline_box: Box,
+        period_w: int,
+        style: dict[str, Any],
+        existing: list[Box],
+    ) -> Box:
+        placement = style.get("milestoneLabelPlacement", "below")
+        overflow = style.get("milestoneLabelOverflow", "extend")
+        label_h = self._timeline_label_height("caption")
+        gap = self._unit("0.04in", timeline_box.h, 0)
+        marker_center_x = marker_box.x + marker_box.w / 2
+
+        if overflow == "extend":
+            size = self._timeline_role_size("caption")
+            measured_w = self._text_width_emu(label, "caption", size)
+            label_w = min(timeline_box.w, max(period_w, measured_w + 2 * gap))
+        else:
+            label_w = period_w
+
+        x = round(marker_center_x - label_w / 2)
+        x = max(timeline_box.x, min(x, timeline_box.right - label_w))
+        if placement == "above":
+            y = marker_box.y - label_h - gap
+        elif placement == "inline":
+            y = marker_box.y + round((marker_box.h - label_h) / 2)
+            x = min(timeline_box.right - label_w, marker_box.right + gap)
+        else:
+            y = marker_box.bottom + gap
+
+        box = Box(round(x), round(y), round(label_w), label_h)
+        if overflow == "stagger":
+            box = self._stagger_milestone_label(box, timeline_box, existing, placement, gap)
+        return box
+
+    def _stagger_milestone_label(
+        self,
+        box: Box,
+        timeline_box: Box,
+        existing: list[Box],
+        placement: str,
+        gap: int,
+    ) -> Box:
+        candidate = box
+        direction = -1 if placement == "above" else 1
+        while any(self._boxes_overlap(candidate, other) for other in existing):
+            candidate = Box(candidate.x, candidate.y + direction * (candidate.h + gap), candidate.w, candidate.h)
+            if candidate.y < timeline_box.y:
+                candidate = Box(candidate.x, timeline_box.y, candidate.w, candidate.h)
+                break
+            if candidate.bottom > timeline_box.bottom:
+                candidate = Box(candidate.x, timeline_box.bottom - candidate.h, candidate.w, candidate.h)
+                break
+        return candidate
+
+    def _boxes_overlap(self, left: Box, right: Box) -> bool:
+        return not (
+            left.right <= right.x
+            or right.right <= left.x
+            or left.bottom <= right.y
+            or right.bottom <= left.y
+        )
+
+    def _timeline_text_shape(
+        self,
+        name: str,
+        box: Box,
+        text: str,
+        *,
+        role: str,
+        align: str,
+        overflow: str,
+        bold: bool = False,
+        color: str | None = None,
+    ) -> dict[str, Any]:
+        fitted_text, size_pt = self._fit_timeline_label(
+            text,
+            box.w,
+            role,
+            overflow if overflow in {"truncate", "shrink"} else "truncate",
+            bold=bold,
+        )
+        run = {"text": fitted_text, "size_pt": size_pt}
+        if bold:
+            run["bold"] = True
+        if color:
+            run["color"] = color
+        paragraph = {
+            "text": fitted_text,
+            "runs": [run],
+            "align": align,
+            "role": role,
+        }
+        return {
+            "type": "text_box",
+            "name": name,
+            **box.as_shape_geometry(),
+            "paragraphs": [paragraph],
+            "wrap": "none",
+            "anchor": "ctr",
+        }
+
+    def _fit_timeline_label(
+        self,
+        text: str,
+        width: int,
+        role: str,
+        overflow: str,
+        *,
+        bold: bool = False,
+    ) -> tuple[str, float]:
+        size = self._timeline_role_size(role)
+        floor = self._timeline_role_min_size(role)
+        if self._timeline_label_fits(text, role, size, width, bold=bold):
+            return text, size
+
+        if overflow == "shrink":
+            while size - 0.5 >= floor:
+                size = round(size - 0.5, 2)
+                if self._timeline_label_fits(text, role, size, width, bold=bold):
+                    return text, size
+            size = floor
+
+        return self._truncate_timeline_label(text, role, size, width, bold=bold), size
+
+    def _truncate_timeline_label(
+        self,
+        text: str,
+        role: str,
+        size: float,
+        width: int,
+        *,
+        bold: bool = False,
+    ) -> str:
+        ellipsis = "..."
+        if width <= 0:
+            return ""
+        if self._timeline_label_fits(ellipsis, role, size, width, bold=bold):
+            suffix = ellipsis
+        else:
+            suffix = ""
+
+        candidate = text
+        while candidate:
+            truncated = f"{candidate}{suffix}"
+            if self._timeline_label_fits(truncated, role, size, width, bold=bold):
+                return truncated
+            candidate = candidate[:-1].rstrip()
+        return suffix if suffix else ""
+
+    def _timeline_label_fits(
+        self,
+        text: str,
+        role: str,
+        size: float,
+        width: int,
+        *,
+        bold: bool = False,
+    ) -> bool:
+        measurement = self.text_measurer.measure(
+            text,
+            self._timeline_font_family(role),
+            size,
+            max(1, width),
+            bold=bold,
+        )
+        return measurement.wrapped_lines <= 1 and measurement.rendered_width_emu <= max(1, width)
+
+    def _text_width_emu(self, text: str, role: str, size: float, *, bold: bool = False) -> int:
+        measurement = self.text_measurer.measure(
+            text,
+            self._timeline_font_family(role),
+            size,
+            self._slide_box.w if self._slide_box else REFERENCE["slide_sizes"]["16:9"]["cx"],
+            bold=bold,
+        )
+        return measurement.rendered_width_emu
+
+    def _timeline_label_height(self, role: str) -> int:
+        size = self._timeline_role_size(role)
+        line_spacing = self._type_scale(role).get("lineSpacing", 1.0)
+        measurement = self.text_measurer.measure(
+            "Ag",
+            self._timeline_font_family(role),
+            size,
+            self._slide_box.w if self._slide_box else REFERENCE["slide_sizes"]["16:9"]["cx"],
+            line_spacing=float(line_spacing),
+        )
+        return measurement.rendered_height_emu
+
+    def _timeline_role_size(self, role: str) -> float:
+        return self._scale_size_points(self._type_scale(role).get("size", 17))
+
+    def _timeline_role_min_size(self, role: str) -> float:
+        bundle = self._type_scale(role)
+        return self._scale_size_points(bundle.get("minSize", self._timeline_role_size(role)))
+
+    def _timeline_font_family(self, role: str) -> str:
+        fonts = (self._theme or REFERENCE["default_theme"]).get("fonts", {})
+        if role in {"title", "heading", "subheading"}:
+            return fonts.get("heading", "Liberation Sans")
+        return fonts.get("body", "Liberation Sans")
 
     def _stack_slots(self, children: list[Node], box: Box, direction: str, gap: int, align: str) -> list[Box]:
         main_attr = "w" if direction == "h" else "h"
@@ -742,9 +1298,23 @@ class LayoutResolver:
 
     def _timeline_labels(self, node: Node, periods: int) -> list[str]:
         if "labels" not in node.attrs:
-            return [f"Week {index}" for index in range(1, periods + 1)]
+            unit = node.attrs.get("unit", "week")
+            prefixes = {
+                "day": "Day",
+                "week": "Week",
+                "month": "Month",
+                "quarter": "Q",
+            }
+            if unit not in prefixes:
+                raise ValueError(f"Unsupported timeline unit: {unit}")
+            prefix = prefixes[unit]
+            if unit == "quarter":
+                return [f"{prefix}{index}" for index in range(1, periods + 1)]
+            return [f"{prefix} {index}" for index in range(1, periods + 1)]
         labels = [label.strip() for label in node.attrs["labels"].split(",")]
-        return (labels + [f"Week {index}" for index in range(len(labels) + 1, periods + 1)])[:periods]
+        fallback = Node("timeline", {"unit": node.attrs.get("unit", "week")})
+        generated = self._timeline_labels(fallback, periods)
+        return (labels + generated[len(labels) :])[:periods]
 
     def _list_units(self, value: str | None, count: int, parent: int, default: float) -> list[int]:
         if not value:
@@ -773,10 +1343,82 @@ class LayoutResolver:
             return merged
         return dict(attrs)
 
+    def _fit_image_box(self, src: str, box: Box, fit: str) -> tuple[Box, dict[str, int] | None]:
+        if fit == "stretch":
+            return box, None
+
+        size = self._image_pixel_size(src)
+        if size is None:
+            return box, None
+
+        image_w, image_h = size
+        if image_w <= 0 or image_h <= 0 or box.w <= 0 or box.h <= 0:
+            return box, None
+
+        image_aspect = image_w / image_h
+        box_aspect = box.w / box.h
+        if fit == "contain":
+            if image_aspect > box_aspect:
+                fitted_w = box.w
+                fitted_h = round(box.w / image_aspect)
+            else:
+                fitted_h = box.h
+                fitted_w = round(box.h * image_aspect)
+            return (
+                Box(
+                    round(box.x + (box.w - fitted_w) / 2),
+                    round(box.y + (box.h - fitted_h) / 2),
+                    fitted_w,
+                    fitted_h,
+                ),
+                None,
+            )
+
+        crop = {"l": 0, "t": 0, "r": 0, "b": 0}
+        if image_aspect > box_aspect:
+            crop_each = round((1 - box_aspect / image_aspect) / 2 * 100000)
+            crop["l"] = crop["r"] = crop_each
+        else:
+            crop_each = round((1 - image_aspect / box_aspect) / 2 * 100000)
+            crop["t"] = crop["b"] = crop_each
+        return box, crop
+
+    def _image_pixel_size(self, src: str) -> tuple[int, int] | None:
+        path = Path(src)
+        if not path.exists():
+            return None
+        with Image.open(path) as image:
+            return image.size
+
+    def _resolve_background(self, value: str) -> dict[str, str]:
+        background = value.strip()
+        if not background:
+            raise ValueError("background cannot be empty")
+        if background.startswith("image:"):
+            src = background.removeprefix("image:").strip()
+            if not src:
+                raise ValueError("image background requires a source path")
+            return {
+                "kind": "image",
+                "src": self._resolve_image_attrs({"src": src})["src"],
+            }
+
+        if background.startswith("#") or self._is_hex_color(background):
+            return {"kind": "solid", "color": background}
+
+        theme_colors = (self._theme or REFERENCE["default_theme"]).get("colors", {})
+        if background in theme_colors or background in REFERENCE["color_map_default"]:
+            return {"kind": "solid", "color": background}
+        raise ValueError(f"Unknown background color token: {background}")
+
     def _is_named_asset_ref(self, src: str) -> bool:
         if src.startswith("asset:"):
             return True
         return "/" not in src and "\\" not in src and "." not in Path(src).name
+
+    def _is_hex_color(self, value: str) -> bool:
+        text = value.strip().lstrip("#")
+        return len(text) == 6 and all(char in "0123456789abcdefABCDEF" for char in text)
 
     def _has_explicit_box(self, node: Node) -> bool:
         return all(key in node.attrs for key in ("x", "y", "w", "h"))

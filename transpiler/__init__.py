@@ -2,7 +2,7 @@
 
 from transpiler.parser import DSLParser, DSLParseError
 from transpiler.pipeline import TranspileResult, transpile, transpile_deck
-from transpiler.registries import LayoutRegistry, ShapeLibrary, ThemeRegistry
+from transpiler.registries import LayoutRegistry, ShapeLibrary, ThemeRegistry, TimelineStyleRegistry
 from transpiler.resolver import LayoutResolver, ResolvedDeck
 from transpiler.text_metrics import TextMeasurement, TextMeasurer
 from transpiler.validator import ValidationIssue, Validator
@@ -13,6 +13,7 @@ __all__ = [
     "LayoutRegistry",
     "ShapeLibrary",
     "ThemeRegistry",
+    "TimelineStyleRegistry",
     "LayoutResolver",
     "ResolvedDeck",
     "TextMeasurement",

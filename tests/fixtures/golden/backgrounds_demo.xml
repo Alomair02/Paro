@@ -1,0 +1,10 @@
+<deck theme="default" size="16:9" background="accent5">
+  <slide layout="blank" flow="free">
+    <text x="0.7in" y="0.7in" w="6.8in" h="0.7in" role="heading" color="lt1">Deck-level background</text>
+    <shape x="0.7in" y="1.7in" w="3.8in" h="1.1in" fill="lt1" line="none" text="Uses deck default"/>
+  </slide>
+  <slide layout="blank" flow="free" background="#0F172A">
+    <text x="0.7in" y="0.7in" w="6.8in" h="0.7in" role="heading" color="lt1">Slide-level override</text>
+    <shape x="0.7in" y="1.7in" w="4.2in" h="1.1in" fill="accent2" line="none" text="Overrides background"/>
+  </slide>
+</deck>

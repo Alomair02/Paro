@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 from transpiler.ast import Box
@@ -91,6 +92,10 @@ class Validator:
                         )
                     )
 
+            for block in slide.blocks:
+                if block.kind == "image":
+                    self._validate_image_source(block, issues)
+
             free_blocks = [block for block in slide.blocks if block.parent_kind == "free"]
             for i, left in enumerate(free_blocks):
                 for right in free_blocks[i + 1 :]:
@@ -141,6 +146,20 @@ class Validator:
 
     def _inside(self, box: Box, bounds: Box) -> bool:
         return box.x >= bounds.x and box.y >= bounds.y and box.right <= bounds.right and box.bottom <= bounds.bottom
+
+    def _validate_image_source(self, block, issues: list[ValidationIssue]):
+        src = (block.content or {}).get("src") or block.attrs.get("src")
+        if not src:
+            return
+        if not Path(src).exists():
+            issues.append(
+                ValidationIssue(
+                    "error",
+                    "missing_image",
+                    f"Image source does not exist: {src}",
+                    {"src": src},
+                )
+            )
 
     def _overlaps(self, left: Box, right: Box) -> bool:
         return not (
