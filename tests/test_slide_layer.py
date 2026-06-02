@@ -299,6 +299,35 @@ class ShapeEmitterTests(unittest.TestCase):
         self.assertEqual(ln.find("a:solidFill/a:schemeClr", NSMAP).get("val"), "accent2")
         self.assertEqual(ln.find("a:prstDash", NSMAP).get("val"), "dash")
 
+    def test_line_connector_extents_are_never_zero(self):
+        state = SlideState("ppt/slides/slide1.xml")
+
+        vertical = emit_line(
+            {
+                "x1": "1in",
+                "y1": "1in",
+                "x2": "1in",
+                "y2": "3in",
+            },
+            state,
+        )
+        horizontal = emit_line(
+            {
+                "x1": "1in",
+                "y1": "1in",
+                "x2": "3in",
+                "y2": "1in",
+            },
+            state,
+        )
+
+        vertical_ext = vertical.find("p:spPr/a:xfrm/a:ext", NSMAP)
+        horizontal_ext = horizontal.find("p:spPr/a:xfrm/a:ext", NSMAP)
+        self.assertEqual(vertical_ext.get("cx"), "1")
+        self.assertEqual(vertical_ext.get("cy"), str(REFERENCE["units"]["emu_per"]["inch"] * 2))
+        self.assertEqual(horizontal_ext.get("cx"), str(REFERENCE["units"]["emu_per"]["inch"] * 2))
+        self.assertEqual(horizontal_ext.get("cy"), "1")
+
     def test_table_emits_native_graphic_frame_borders_and_merges(self):
         state = SlideState("ppt/slides/slide1.xml")
 

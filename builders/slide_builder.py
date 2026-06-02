@@ -14,6 +14,7 @@ from builders.shape_emitters import (
     emit_table,
     emit_text_box,
 )
+from builders.chart_part_builder import emit_chart
 from core.content_type_reg import ContentTypeRegistry
 from core.relationship_reg import RelationshipRegistry
 from core.xml_builder import qn, to_xml_string
@@ -28,11 +29,13 @@ class SlideBuilder:
         relationships: RelationshipRegistry,
         media_parts: dict[str, bytes] | None = None,
         media_sources: dict[str, str] | None = None,
+        chart_parts: dict[str, str] | None = None,
     ):
         self.content_types = content_types
         self.relationships = relationships
         self.media_parts = media_parts if media_parts is not None else {}
         self.media_sources = media_sources if media_sources is not None else {}
+        self.chart_parts = chart_parts if chart_parts is not None else {}
 
     def build(self, slide_data: dict, part_path: str | None = None) -> str:
         """Build one slide part and register its layout relationship."""
@@ -50,6 +53,7 @@ class SlideBuilder:
             part_path=part_path,
             media_parts=self.media_parts,
             media_sources=self.media_sources,
+            chart_parts=self.chart_parts,
         )
         root = make_root("p", "sld")
 
@@ -109,5 +113,8 @@ class SlideBuilder:
             return emit_line(shape_data, slide_state)
         if shape_type == "table":
             return emit_table(shape_data, slide_state, self.relationships)
+        if shape_type == "chart":
+            return emit_chart(shape_data, slide_state, self.relationships, self.content_types)
+        
 
         raise ValueError(f"Unsupported shape type: {shape_type}")

@@ -13,6 +13,7 @@ from builders.presentation_builder import PresentationBuilder
 from builders.slide_builder import SlideBuilder
 from builders.theme_builder import ThemeBuilder
 from builders.zip_assembler import ZIPAssembler
+from builders.deck_builder import assemble_package
 from core.content_type_reg import ContentTypeRegistry
 from core.relationship_reg import RelationshipRegistry
 from transpiler.ast import DeckAst
@@ -100,51 +101,8 @@ def _inline_theme_map(ast: DeckAst) -> dict[str, dict[str, Any]]:
 
 
 def _build_package(resolved: ResolvedDeck, output_path: Path) -> dict[str, Any]:
-    content_types = ContentTypeRegistry()
-    relationships = RelationshipRegistry()
-    parts: dict[str, str | bytes] = {}
-    media_parts: dict[str, bytes] = {}
-    media_sources: dict[str, str] = {}
-
-    theme_path = package_path("theme", 1)
-    parts[theme_path] = ThemeBuilder(content_types, relationships).build(
-        resolved.theme,
-        part_path=theme_path,
+    return assemble_package(
+        theme=resolved.theme,
+        slide_data=resolved.slide_data,
+        output_path=output_path
     )
-
-    layout_builder = LayoutBuilder(content_types, relationships)
-    for layout_name, layout_def in LAYOUT_DEFINITIONS.items():
-        parts[layout_def["part_path"]] = layout_builder.build(layout_name)
-
-    master_path = package_path("slideMaster", 1)
-    layout_records = LayoutBuilder.default_layout_records()
-    parts[master_path] = MasterBuilder(content_types, relationships).build(
-        layout_records,
-        theme_part_path=theme_path,
-        part_path=master_path,
-    )
-
-    slide_builder = SlideBuilder(content_types, relationships, media_parts, media_sources)
-    slide_paths = []
-    for slide in resolved.slide_data:
-        slide_path = package_path("slide", slide["index"])
-        parts[slide_path] = slide_builder.build(slide, part_path=slide_path)
-        slide_paths.append(slide_path)
-
-    presentation_path = package_path("presentation")
-    parts[presentation_path] = PresentationBuilder(content_types, relationships).build(
-        slide_paths,
-        master_part_path=master_path,
-        part_path=presentation_path,
-    )
-
-    parts.update(media_parts)
-    output_path = ZIPAssembler(content_types, relationships).assemble(output_path, parts)
-    return {
-        "output_path": output_path,
-        "parts": parts,
-        "content_types": content_types,
-        "relationships": relationships,
-        "slide_paths": slide_paths,
-        "layout_records": layout_records,
-    }

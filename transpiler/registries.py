@@ -7,100 +7,6 @@ from copy import deepcopy
 from builders.common import REFERENCE
 from builders.layout_builder import LAYOUT_DEFINITIONS
 
-
-class ThemeRegistry:
-    """Resolve theme names through a small, replaceable registry seam."""
-
-    def __init__(self, themes: dict[str, dict] | None = None):
-        base = deepcopy(REFERENCE["default_theme"])
-        default = deepcopy(base)
-        default["name"] = "default"
-        self._themes = {
-            "default": default,
-            "paro": deepcopy(base),
-            "Paro": deepcopy(base),
-        }
-        if themes:
-            for name, theme in themes.items():
-                self._themes[name] = self._with_default_theme_data(theme, name)
-
-    def get(self, name: str) -> dict:
-        try:
-            return deepcopy(self._themes[name])
-        except KeyError as exc:
-            raise KeyError(f"Unknown theme: {name}") from exc
-
-    def _with_default_theme_data(self, theme: dict, name: str) -> dict:
-        merged = deepcopy(REFERENCE["default_theme"])
-        merged.update(deepcopy(theme))
-        merged["name"] = theme.get("name", name)
-        merged["colors"] = {**REFERENCE["default_theme"]["colors"], **theme.get("colors", {})}
-        merged["fonts"] = {**REFERENCE["default_theme"]["fonts"], **theme.get("fonts", {})}
-        merged["typeScale"] = deepcopy(REFERENCE["default_theme"]["typeScale"])
-        for role, bundle in theme.get("typeScale", {}).items():
-            merged["typeScale"][role] = {
-                **merged["typeScale"].get(role, {}),
-                **deepcopy(bundle),
-            }
-        return merged
-
-
-class LayoutRegistry:
-    """Resolve layout names through the engine's existing layout table."""
-
-    def __init__(self, layouts: dict | None = None):
-        self._layouts = layouts or LAYOUT_DEFINITIONS
-
-    def get(self, name: str) -> dict:
-        try:
-            return deepcopy(self._layouts[name])
-        except KeyError as exc:
-            raise KeyError(f"Unknown layout: {name}") from exc
-
-
-class ShapeLibrary:
-    """Resolve named reusable assets through a replaceable seam."""
-
-    def __init__(self, assets: dict[str, dict] | None = None):
-        self._assets = deepcopy(assets or {})
-
-    def get(self, name: str) -> dict:
-        try:
-            return deepcopy(self._assets[name])
-        except KeyError as exc:
-            raise KeyError(f"Unknown named asset: {name}") from exc
-
-
-class TimelineStyleRegistry:
-    """Resolve timeline styles through the same thin design-system seam."""
-
-    DEFAULT_STYLE = "gantt-grid"
-
-    def __init__(self, styles: dict[str, dict] | None = None, finishes: dict[str, dict] | None = None):
-        self._styles = deepcopy(TIMELINE_STYLES)
-        self._finishes = deepcopy(TIMELINE_FINISHES)
-        if styles:
-            for name, style in styles.items():
-                self._styles[name] = deepcopy(style)
-        if finishes:
-            for name, finish in finishes.items():
-                self._finishes[name] = deepcopy(finish)
-
-    def get(self, name: str | None = None) -> dict:
-        style_name = name or self.DEFAULT_STYLE
-        try:
-            return deepcopy(self._styles[style_name])
-        except KeyError as exc:
-            raise KeyError(f"Unknown timeline style: {style_name}") from exc
-
-    def get_finish(self, name: str | None = None) -> dict:
-        finish_name = name or "flat"
-        try:
-            return deepcopy(self._finishes[finish_name])
-        except KeyError as exc:
-            raise KeyError(f"Unknown timeline finish: {finish_name}") from exc
-
-
 TIMELINE_FINISHES = {
     "flat": {
         "fill": {"type": "solid"},
@@ -238,3 +144,192 @@ TIMELINE_STYLES = {
         "finish": "elevated",
     },
 }
+
+CHART_STYLES = {
+    "clean": {
+        "palette": ["accent1", "accent2", "accent3", "accent4", "accent5", "accent6"],
+        "gridlines": "major",          # none | major
+        "gridColor": "dk2",
+        "gridWidth": "0.5pt",
+        "axisColor": "dk2",
+        "legendPos": "b",              # b | t | l | r | none
+        "dataLabels": "none",          # none | value | percent
+        "finish": "flat",
+    },
+    "minimal": {
+        "palette": ["accent1", "accent2", "accent3", "accent4", "accent5", "accent6"],
+        "gridlines": "none",
+        "gridColor": "dk2",
+        "gridWidth": "0.5pt",
+        "axisColor": "lt2",
+        "legendPos": "none",
+        "dataLabels": "value",
+        "finish": "flat",
+    },
+    "editorial": {
+        "palette": ["accent1", "accent2", "accent3", "accent4", "accent5", "accent6"],
+        "gridlines": "major",
+        "gridColor": "lt2",
+        "gridWidth": "0.5pt",
+        "axisColor": "dk2",
+        "legendPos": "t",
+        "dataLabels": "none",
+        "finish": "soft-shadow",
+    },
+    "vivid": {
+        "palette": ["accent1", "accent2", "accent3", "accent4", "accent5", "accent6"],
+        "gridlines": "none",
+        "gridColor": "dk2",
+        "gridWidth": "0.5pt",
+        "axisColor": "dk2",
+        "legendPos": "b",
+        "dataLabels": "value",
+        "finish": "soft-shadow",
+    },
+}
+
+CHART_FINISHES = {
+    "flat": {"fillMode": "solid", "border": None, "shadow": None, "cornerRadius": "0"},
+    "soft-shadow": {
+        "fillMode": "solid",
+        "border": None,
+        "shadow": {"blur": "2.5pt", "dist": "1pt", "dir": 2700000, "alpha": 14000},
+        "cornerRadius": "0",
+    },
+    "outlined": {
+        "fillMode": "tinted",
+        "border": {"color": "tone", "width": "1pt"},
+        "shadow": None,
+        "cornerRadius": "0",
+    },
+    "gradient-subtle": {
+        "fillMode": "gradient",
+        "border": None,
+        "shadow": {"blur": "3pt", "dist": "1pt", "dir": 2700000, "alpha": 12000},
+        "cornerRadius": "0",
+    },
+}
+
+class ThemeRegistry:
+    """Resolve theme names through a small, replaceable registry seam."""
+
+    def __init__(self, themes: dict[str, dict] | None = None):
+        base = deepcopy(REFERENCE["default_theme"])
+        default = deepcopy(base)
+        default["name"] = "default"
+        self._themes = {
+            "default": default,
+            "paro": deepcopy(base),
+            "Paro": deepcopy(base),
+        }
+        if themes:
+            for name, theme in themes.items():
+                self._themes[name] = self._with_default_theme_data(theme, name)
+
+    def get(self, name: str) -> dict:
+        try:
+            return deepcopy(self._themes[name])
+        except KeyError as exc:
+            raise KeyError(f"Unknown theme: {name}") from exc
+
+    def _with_default_theme_data(self, theme: dict, name: str) -> dict:
+        merged = deepcopy(REFERENCE["default_theme"])
+        merged.update(deepcopy(theme))
+        merged["name"] = theme.get("name", name)
+        merged["colors"] = {**REFERENCE["default_theme"]["colors"], **theme.get("colors", {})}
+        merged["fonts"] = {**REFERENCE["default_theme"]["fonts"], **theme.get("fonts", {})}
+        merged["typeScale"] = deepcopy(REFERENCE["default_theme"]["typeScale"])
+        for role, bundle in theme.get("typeScale", {}).items():
+            merged["typeScale"][role] = {
+                **merged["typeScale"].get(role, {}),
+                **deepcopy(bundle),
+            }
+        return merged
+
+
+class LayoutRegistry:
+    """Resolve layout names through the engine's existing layout table."""
+
+    def __init__(self, layouts: dict | None = None):
+        self._layouts = layouts or LAYOUT_DEFINITIONS
+
+    def get(self, name: str) -> dict:
+        try:
+            return deepcopy(self._layouts[name])
+        except KeyError as exc:
+            raise KeyError(f"Unknown layout: {name}") from exc
+
+
+class ShapeLibrary:
+    """Resolve named reusable assets through a replaceable seam."""
+
+    def __init__(self, assets: dict[str, dict] | None = None):
+        self._assets = deepcopy(assets or {})
+
+    def get(self, name: str) -> dict:
+        try:
+            return deepcopy(self._assets[name])
+        except KeyError as exc:
+            raise KeyError(f"Unknown named asset: {name}") from exc
+
+
+class TimelineStyleRegistry:
+    """Resolve timeline styles through the same thin design-system seam."""
+
+    DEFAULT_STYLE = "gantt-grid"
+
+    def __init__(self, styles: dict[str, dict] | None = None, finishes: dict[str, dict] | None = None):
+        self._styles = deepcopy(TIMELINE_STYLES)
+        self._finishes = deepcopy(TIMELINE_FINISHES)
+        if styles:
+            for name, style in styles.items():
+                self._styles[name] = deepcopy(style)
+        if finishes:
+            for name, finish in finishes.items():
+                self._finishes[name] = deepcopy(finish)
+
+    def get(self, name: str | None = None) -> dict:
+        style_name = name or self.DEFAULT_STYLE
+        try:
+            return deepcopy(self._styles[style_name])
+        except KeyError as exc:
+            raise KeyError(f"Unknown timeline style: {style_name}") from exc
+
+    def get_finish(self, name: str | None = None) -> dict:
+        finish_name = name or "flat"
+        try:
+            return deepcopy(self._finishes[finish_name])
+        except KeyError as exc:
+            raise KeyError(f"Unknown timeline finish: {finish_name}") from exc
+        
+class ChartStyleRegistry:
+    """Resolve chart styles + finishes through the same thin design-system seam."""
+
+    DEFAULT_STYLE = "clean"
+
+    def __init__(self, styles: dict[str, dict] | None = None, finishes: dict[str, dict] | None = None):
+        self._styles = deepcopy(CHART_STYLES)
+        self._finishes = deepcopy(CHART_FINISHES)
+        if styles:
+            for name, style in styles.items():
+                self._styles[name] = deepcopy(style)
+        if finishes:
+            for name, finish in finishes.items():
+                self._finishes[name] = deepcopy(finish)
+
+    def get(self, name: str | None = None) -> dict:
+        style_name = name or self.DEFAULT_STYLE
+        try:
+            return deepcopy(self._styles[style_name])
+        except KeyError as exc:
+            raise KeyError(f"Unknown chart style: {style_name}") from exc
+
+    def get_finish(self, name: str | None = None) -> dict:
+        finish_name = name or "flat"
+        try:
+            return deepcopy(self._finishes[finish_name])
+        except KeyError as exc:
+            raise KeyError(f"Unknown chart finish: {finish_name}") from exc
+
+
+

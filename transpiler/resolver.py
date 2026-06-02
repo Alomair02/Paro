@@ -10,7 +10,7 @@ from PIL import Image
 
 from builders.common import REFERENCE
 from transpiler.ast import Box, DeckAst, Node, ResolvedBlock, ResolvedSlide
-from transpiler.registries import LayoutRegistry, ShapeLibrary, ThemeRegistry, TimelineStyleRegistry
+from transpiler.registries import LayoutRegistry, ShapeLibrary, ThemeRegistry, TimelineStyleRegistry, ChartStyleRegistry
 from transpiler.text_metrics import TextMeasurer
 from utils.converter import UnitConverter
 
@@ -43,11 +43,13 @@ class LayoutResolver:
         layout_registry: LayoutRegistry | None = None,
         shape_library: ShapeLibrary | None = None,
         timeline_style_registry: TimelineStyleRegistry | None = None,
+        chart_style_registry: ChartStyleRegistry | None = None,
     ):
         self.theme_registry = theme_registry or ThemeRegistry()
         self.layout_registry = layout_registry or LayoutRegistry()
         self.shape_library = shape_library or ShapeLibrary()
         self.timeline_style_registry = timeline_style_registry or TimelineStyleRegistry()
+        self.chart_style_registry = chart_style_registry or ChartStyleRegistry()
         self.text_measurer = TextMeasurer()
         self._resolved_slide: ResolvedSlide | None = None
         self._slide_box: Box | None = None
@@ -105,6 +107,8 @@ class LayoutResolver:
             self._resolve_table(node, box, parent_kind)
         elif node.kind == "timeline":
             self._resolve_timeline(node, box, parent_kind)
+        elif node.kind == "chart":
+            self._resolve_chart(node, box, parent_kind)
         else:
             raise ValueError(f"Unsupported AST node: {node.kind}")
 
@@ -390,6 +394,61 @@ class LayoutResolver:
         style = self._timeline_style_with_finish(node, style)
         self._resolve_timeline_bars_in_columns(node, actual_box, periods, style)
         self._record_block("timeline", actual_box, parent_kind, node.attrs)
+
+    def _resolve_chart(self, node: Node, box: Box, parent_kind: str):
+        actual_box = self._box_for_node(node, box)
+
+        chart_type = node.attrs["type"]
+        if chart_type not in {"bar", "column", "line", "pie", "area", "scatter"}:
+            raise ValueError(f"Unsupported chart type: {chart_type}")
+        
+        # categories: a comma string in the <categories> child's text
+        cat_node = next((c for c in node.children if c.kind == "categories"), None)
+        categories = (
+            [c.strip() for c in cat_node.text.split(",")] if cat_node and cat_node.text else []
+        )
+
+        # series: one or more <series> with <point> children (or cat/value attrs on points)
+        series_nodes = [c for c in node.children if c.kind == "series"]
+        if not series_nodes:
+            raise ValueError("<chart> requires at least one <series> child")
+        
+        series = []
+        for s in series_nodes:
+            points = [p for p in s.children if p.kind == "point"]
+            values = [self._chart_number(p.attrs["value"]) for p in points]
+            if not categories:
+                categories = [p.attrs.get("cat", "") for p in points]
+            series.append({
+                "name": s.attrs["name"],
+                "tone": s.attrs.get("tone"),
+                "values": values,
+            })
+        
+        style = self.chart_style_registry.get(node.attrs.get("style"))
+        finish = self.chart_style_registry.get_finish(node.attrs.get("finish", style.get("finish",)))
+
+        shape = {
+            "type": "chart",
+            "name": node.attrs.get("title", "Chart"),
+            "chart_type": chart_type,
+            "title": node.attrs.get("title"),
+            "categories": categories,
+            "series": series,
+            "stacked": node.attrs.get("stacked", "false").lower() == "true",
+            "legend": node.attrs.get("legend"),
+            "style": style,
+            "finish": finish,
+            **actual_box.as_shape_geometry(),
+        }
+        self._append_shape(shape)
+        self._record_block("chart", actual_box, parent_kind, node.attrs, content=shape)
+    
+    def _chart_number(self, value: str) -> float:
+        try:
+            return float(value)
+        except ValueError:
+            raise ValueError(f"Invalid chart point value: {value}")
 
     def _timeline_style_with_finish(self, node: Node, style: dict[str, Any]) -> dict[str, Any]:
         style = dict(style)

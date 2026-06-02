@@ -22,6 +22,8 @@ class ContentTypeRegistry:
     TABLE_STYLES  = "application/vnd.openxmlformats-officedocument.presentationml.tableStyles+xml"
     CORE_PROPS    = "application/vnd.openxmlformats-package.core-properties+xml"
     APP_PROPS     = "application/vnd.openxmlformats-officedocument.extended-properties+xml"
+    CHART         = "application/vnd.openxmlformats-officedocument.drawingml.chart+xml"
+    SPREADSHEET   = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
     def __init__(self):
         # Defaults cover all files of a given extension, e.g. "xml" → "application/xml"

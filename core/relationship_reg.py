@@ -26,6 +26,8 @@ class RelationshipRegistry:
     TABLE_STYLES  = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/tableStyles"
     CORE_PROPERTIES = "http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties"
     EXTENDED_PROPERTIES = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties"
+    CHART         = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart"
+    PACKAGE       = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/package"
 
     def __init__(self):
         self.registry = {}
@@ -90,6 +92,8 @@ class RelationshipRegistry:
             RelationshipRegistry.TABLE_STYLES,
             RelationshipRegistry.CORE_PROPERTIES,
             RelationshipRegistry.EXTENDED_PROPERTIES,
+            RelationshipRegistry.CHART,
+            RelationshipRegistry.PACKAGE,
         }
         if rel_type not in valid_types:
             raise ValueError(f"Invalid relationship type: {rel_type}")

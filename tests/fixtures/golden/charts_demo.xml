@@ -1,0 +1,27 @@
+<deck theme="default" size="16:9">
+  <slide layout="blank" flow="free">
+    <chart type="column" style="clean" finish="flat" title="Column" x="0.7in" y="0.7in" w="6in" h="4in">
+      <categories>EMEA, APAC, Americas</categories>
+      <series name="2025" tone="accent1"><point cat="EMEA" value="42"/><point cat="APAC" value="31"/><point cat="Americas" value="58"/></series>
+      <series name="2026" tone="accent2"><point cat="EMEA" value="50"/><point cat="APAC" value="38"/><point cat="Americas" value="64"/></series>
+    </chart>
+  </slide>
+  <slide layout="blank" flow="free">
+    <chart type="line" style="minimal" finish="flat" title="Line" x="0.7in" y="0.7in" w="6in" h="4in">
+      <categories>Q1, Q2, Q3, Q4</categories>
+      <series name="Bookings" tone="accent3"><point cat="Q1" value="12"/><point cat="Q2" value="27"/><point cat="Q3" value="19"/><point cat="Q4" value="34"/></series>
+    </chart>
+  </slide>
+  <slide layout="blank" flow="free">
+    <chart type="pie" style="clean" finish="flat" title="Pie" x="0.7in" y="0.7in" w="5in" h="4in">
+      <categories>A, B, C</categories>
+      <series name="Share"><point cat="A" value="30"/><point cat="B" value="45"/><point cat="C" value="25"/></series>
+    </chart>
+  </slide>
+  <slide layout="blank" flow="free">
+    <chart type="area" style="editorial" finish="gradient-subtle" title="Area" x="0.7in" y="0.7in" w="6in" h="4in">
+      <categories>A, B, C</categories>
+      <series name="S1" tone="accent4"><point cat="A" value="10"/><point cat="B" value="25"/><point cat="C" value="15"/></series>
+    </chart>
+  </slide>
+</deck>

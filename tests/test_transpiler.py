@@ -44,6 +44,9 @@ def parse_resolve(xml: str):
 def shape_by_name(slide_data: dict, name: str):
     return next(shape for shape in slide_data["shapes"] if shape.get("name") == name)
 
+def parse_xml_localname(element) -> str:
+    from lxml import etree
+    return etree.QName(element).localname
 
 def write_test_image(path: Path, size: tuple[int, int] = (200, 100)):
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -797,6 +800,7 @@ class TranspilerIntegrationTests(unittest.TestCase):
                 if name.startswith("ppt/slides/slide") and name.endswith(".xml")
             )
             luminance_values = []
+            connector_extents = []
             for name in pptx.namelist():
                 if not name.endswith(".xml"):
                     continue
@@ -805,6 +809,11 @@ class TranspilerIntegrationTests(unittest.TestCase):
                     luminance_values.extend(
                         int(node.get("val"))
                         for node in root.findall(f".//a:{transform}", NSMAP)
+                    )
+                if name.startswith("ppt/slides/slide"):
+                    connector_extents.extend(
+                        (int(ext.get("cx")), int(ext.get("cy")))
+                        for ext in root.findall(".//p:cxnSp/p:spPr/a:xfrm/a:ext", NSMAP)
                     )
 
         self.assertIn("Timeline Task Discovery research", slide_xml)
@@ -819,6 +828,8 @@ class TranspilerIntegrationTests(unittest.TestCase):
         self.assertIn("<a:gd name=\"adj\"", slide_xml)
         self.assertTrue(luminance_values)
         self.assertLessEqual(max(luminance_values), 100000)
+        self.assertTrue(connector_extents)
+        self.assertTrue(all(cx > 0 and cy > 0 for cx, cy in connector_extents))
         self.assertIn("<p:cxnSp>", slide_xml)
         self.assertTrue(output_path.exists())
 
@@ -909,6 +920,88 @@ class TranspilerIntegrationTests(unittest.TestCase):
         self.assertIn("<a:noFill", slide_xml)
         self.assertIn('u="sng"', slide_xml)
         self.assertIn("<p:cxnSp>", slide_xml)
+    
+    def test_charts_demo_transpiles_opens_and_contains_chart_parts(self):
+        try:
+            from pptx import Presentation as PptxPresentation
+        except ImportError:
+            self.fail("python-pptx is required for transpiler integration tests")
+
+        source_path = Path("tests/fixtures/golden/charts_demo.xml")
+        output_path = Path("tests/fixtures/charts_demo.pptx")
+        result = transpile_deck(source_path, output_path)
+
+        presentation = PptxPresentation(str(result.pptx_path))
+        self.assertEqual(len(presentation.slides), 4)
+        self.assertFalse([issue for issue in result.validation_issues if issue.severity == "error"])
+
+        CHART_NS = "http://schemas.openxmlformats.org/drawingml/2006/chart"
+        ns = dict(NSMAP, c=CHART_NS)
+
+        with ZipFile(output_path) as pptx:
+            names = pptx.namelist()
+
+            # 1. chart parts + embedded workbooks exist, one per chart
+            chart_parts = sorted(n for n in names if n.startswith("ppt/charts/chart") and n.endswith(".xml"))
+            workbooks = sorted(n for n in names if n.startswith("xl/embeddings/") and n.endswith(".xlsx"))
+            self.assertEqual(len(chart_parts), 4)
+            self.assertEqual(len(workbooks), 4)
+
+            # 2. correct plot element per chart type
+            plot_elements = []
+            for part in chart_parts:
+                root = parse_xml(pptx.read(part).decode("utf-8"))
+                plot_area = root.find("c:chart/c:plotArea", ns)
+                kinds = [parse_xml_localname(child) for child in plot_area]
+                plot_elements.append([k for k in kinds if k.endswith("Chart")])
+
+            flat_plots = [p for sub in plot_elements for p in sub]
+            self.assertIn("barChart", flat_plots)
+            self.assertIn("lineChart", flat_plots)
+            self.assertIn("pieChart", flat_plots)
+            self.assertIn("areaChart", flat_plots)
+
+            # 3. cache == workbook for the first chart (the invariant)
+            self._assert_cache_matches_workbook(pptx, chart_parts[0], workbooks, ns)
+
+            # 4. finishes emit their distinct spPr signatures somewhere
+            all_chart_xml = "\n".join(pptx.read(p).decode("utf-8") for p in chart_parts)
+            self.assertIn("<a:gradFill", all_chart_xml)   # gradient-subtle slide
+
+            # 5. no out-of-range luminance anywhere (repair-bug guard)
+            luminance = []
+            for name in names:
+                if name.endswith(".xml"):
+                    root = parse_xml(pptx.read(name).decode("utf-8"))
+                    for transform in ("lumMod", "lumOff"):
+                        luminance.extend(int(node.get("val")) for node in root.findall(f".//a:{transform}", ns))
+            self.assertTrue(luminance)
+            self.assertLessEqual(max(luminance), 100000)
+
+        self.assertTrue(output_path.exists())
+
+    def _assert_cache_matches_workbook(self, pptx, chart_part, workbooks, ns):
+        """The chart's numCache values must equal the embedded workbook's cell values."""
+        from openpyxl import load_workbook
+        import io
+
+        root = parse_xml(pptx.read(chart_part).decode("utf-8"))
+        cache_values = [
+            float(v.text)
+            for v in root.findall(".//c:val/c:numRef/c:numCache/c:pt/c:v", ns)
+        ]
+        # load the first workbook and read its numeric cells (column B onward, rows 2+)
+        wb = load_workbook(io.BytesIO(pptx.read(workbooks[0])))
+        ws = wb.active
+        wb_values = []
+        col = 2  # B
+        while ws.cell(row=2, column=col).value is not None:
+            r = 2
+            while ws.cell(row=r, column=col).value is not None:
+                wb_values.append(float(ws.cell(row=r, column=col).value))
+                r += 1
+            col += 1
+        self.assertEqual(sorted(cache_values), sorted(wb_values))
 
 
 if __name__ == "__main__":

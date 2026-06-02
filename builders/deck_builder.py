@@ -16,19 +16,23 @@ from core.relationship_reg import RelationshipRegistry
 
 SAMPLE_THEME = deepcopy(REFERENCE["default_theme"])
 
-
-def build_deck(output_path: str | Path = "tests/fixtures/sample_deck.pptx") -> dict:
-    """Build a complete two-slide sample deck and write it to output_path."""
+def assemble_package(
+    theme: dict,
+    slide_data: list[dict],
+    output_path,
+) -> dict:
+    """Shared package-building sequence: theme -> layouts -> master ->
+    slides -> presentation -> assemble. The single place part-wiring lives."""
     content_types = ContentTypeRegistry()
     relationships = RelationshipRegistry()
     parts: dict[str, str | bytes] = {}
     media_parts: dict[str, bytes] = {}
     media_sources: dict[str, str] = {}
+    chart_parts: dict[str, str | bytes] = {}
 
     theme_path = package_path("theme", 1)
     parts[theme_path] = ThemeBuilder(content_types, relationships).build(
-        SAMPLE_THEME,
-        part_path=theme_path,
+        theme, part_path=theme_path
     )
 
     layout_builder = LayoutBuilder(content_types, relationships)
@@ -38,13 +42,12 @@ def build_deck(output_path: str | Path = "tests/fixtures/sample_deck.pptx") -> d
     master_path = package_path("slideMaster", 1)
     layout_records = LayoutBuilder.default_layout_records()
     parts[master_path] = MasterBuilder(content_types, relationships).build(
-        layout_records,
-        theme_part_path=theme_path,
-        part_path=master_path,
+        layout_records, theme_part_path=theme_path, part_path=master_path
     )
 
-    slide_builder = SlideBuilder(content_types, relationships, media_parts, media_sources)
-    slide_data = _sample_slides()
+    slide_builder = SlideBuilder(
+        content_types, relationships, media_parts, media_sources, chart_parts
+    )
     slide_paths = []
     for slide in slide_data:
         slide_path = package_path("slide", slide["index"])
@@ -53,14 +56,12 @@ def build_deck(output_path: str | Path = "tests/fixtures/sample_deck.pptx") -> d
 
     presentation_path = package_path("presentation")
     parts[presentation_path] = PresentationBuilder(content_types, relationships).build(
-        slide_paths,
-        master_part_path=master_path,
-        part_path=presentation_path,
+        slide_paths, master_part_path=master_path, part_path=presentation_path
     )
 
     parts.update(media_parts)
+    parts.update(chart_parts)
     output_path = ZIPAssembler(content_types, relationships).assemble(output_path, parts)
-
     return {
         "output_path": output_path,
         "parts": parts,
@@ -70,6 +71,9 @@ def build_deck(output_path: str | Path = "tests/fixtures/sample_deck.pptx") -> d
         "layout_records": layout_records,
     }
 
+def build_deck(output_path: str | Path = "tests/fixtures/sample_deck.pptx") -> dict:
+    """Build a complete two-slide sample deck and write it to output_path."""
+    return assemble_package(SAMPLE_THEME, _sample_slides(), output_path)
 
 def _sample_slides() -> list[dict]:
     return [

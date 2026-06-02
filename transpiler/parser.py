@@ -115,6 +115,12 @@ ALLOWED_ATTRS = {
     "group": {"label"},
     "task": {"label", "start", "span", "tone"},
     "milestone": {"label", "at"},
+    "chart": {"type", "title", "style", "finish", "legend", "stacked"}
+    | GRID_PLACEMENT_ATTRS
+    | GEOMETRY_ATTRS,
+    "categories": set(),
+    "series": {"name", "tone", "axis"},
+    "point": {"cat", "value", "x", "y"},
 }
 
 REQUIRED_ATTRS = {
@@ -127,6 +133,8 @@ REQUIRED_ATTRS = {
     "group": {"label"},
     "task": {"label", "start"},
     "milestone": {"label", "at"},
+    "chart": {"type"},
+    "series": {"name"},
 }
 
 ALLOWED_CHILDREN = {
@@ -142,6 +150,7 @@ ALLOWED_CHILDREN = {
         "line",
         "table",
         "timeline",
+        "chart",
         "use",
     },
     "slide": {
@@ -154,11 +163,12 @@ ALLOWED_CHILDREN = {
         "line",
         "table",
         "timeline",
+        "chart",
         "use",
     },
-    "stack": {"stack", "grid", "free", "text", "image", "shape", "line", "table", "timeline", "use"},
-    "grid": {"stack", "grid", "free", "text", "image", "shape", "line", "table", "timeline", "use"},
-    "free": {"stack", "grid", "free", "text", "image", "shape", "line", "table", "timeline", "use"},
+    "stack": {"stack", "grid", "free", "text", "image", "shape", "line", "table", "timeline", "chart", "use"},
+    "grid": {"stack", "grid", "free", "text", "image", "shape", "line", "table", "timeline", "chart", "use"},
+    "free": {"stack", "grid", "free", "text", "image", "shape", "line", "table", "timeline", "chart", "use"},
     "text": {"p"},
     "p": {"run"},
     "shape": {"text"},
@@ -166,6 +176,8 @@ ALLOWED_CHILDREN = {
     "row": {"cell"},
     "cell": {"p"},
     "timeline": {"group", "task", "milestone"},
+    "chart": {"categories", "series"},
+    "series": {"point"},
     "group": {"task"},
 }
 

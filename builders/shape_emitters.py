@@ -55,18 +55,49 @@ class SlideState:
     part_path: str
     media_parts: dict[str, bytes] = field(default_factory=dict)
     media_sources: dict[str, str] = field(default_factory=dict)
+    chart_parts: dict[str, str] = field(default_factory=dict)
     _last_shape_id: int = field(
         default_factory=lambda: REFERENCE["constraints"]["shape_id_group_tree"]
     )
     _next_media_index: int = 1
+    _next_chart_index: int = 1
 
     def __post_init__(self):
         self._next_media_index = self._infer_next_media_index()
+        self._next_chart_index = self._infer_next_chart_index()
 
     def next_id(self) -> int:
         """Return the next unique shape ID for this slide."""
         self._last_shape_id += 1
         return self._last_shape_id
+    
+    def next_chart_index(self) -> int:
+        """Return the next unique chart index for this presentation."""
+        chart_index = self._next_chart_index
+        self._next_chart_index += 1
+        return chart_index
+    
+    def next_chart_path(self) -> str:
+        """Allocate the next available ppt/charts/chartN.xml package path."""
+        chart_index = self.next_chart_index()
+        chart_path = f"ppt/charts/chart{chart_index}.xml"
+        while chart_path in self.chart_parts:
+            chart_index = self.next_chart_index()
+            chart_path = f"ppt/charts/chart{chart_index}.xml"
+        return chart_path
+    
+    def _infer_next_chart_index(self) -> int:
+        prefix = "ppt/charts/chart"
+        highest = 0
+        for chart_path in self.chart_parts:
+            if not chart_path.startswith(prefix):
+                continue
+            stem = Path(chart_path).stem
+            try:
+                highest = max(highest, int(stem.removeprefix("chart")))
+            except ValueError:
+                continue
+        return highest + 1
 
     def next_media_path(self, extension: str) -> str:
         """Allocate the next available ppt/media/imageN.ext package path."""
@@ -279,7 +310,12 @@ def emit_line(shape_data: dict, slide_state: SlideState) -> etree._Element:
     etree.SubElement(nv_cxn_sp_pr, qn("p", "nvPr"))
 
     sp_pr = etree.SubElement(cxn_sp, qn("p", "spPr"))
-    xfrm = make_xfrm(min(x1, x2), min(y1, y2), abs(x2 - x1), abs(y2 - y1))
+    xfrm = make_xfrm(
+        min(x1, x2),
+        min(y1, y2),
+        max(1, abs(x2 - x1)),
+        max(1, abs(y2 - y1)),
+    )
     if x2 < x1:
         xfrm.set("flipH", "1")
     if y2 < y1:
