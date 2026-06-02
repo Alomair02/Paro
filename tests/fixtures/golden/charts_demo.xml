@@ -24,4 +24,10 @@
       <series name="S1" tone="accent4"><point cat="A" value="10"/><point cat="B" value="25"/><point cat="C" value="15"/></series>
     </chart>
   </slide>
+  <slide layout="blank" flow="free">
+    <chart type="scatter" style="clean" title="Scatter" x="0.7in" y="0.7in" w="6in" h="4in">
+      <series name="Set A" tone="accent1"><point x="1" y="5"/><point x="2" y="9"/><point x="3" y="4"/></series>
+      <series name="Set B" tone="accent2"><point x="1" y="2"/><point x="2" y="6"/><point x="3" y="8"/></series>
+    </chart>
+  </slide>
 </deck>

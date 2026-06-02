@@ -113,56 +113,93 @@ def build_chart_part_xml(workbook_rid: str, categories: list, series_list: list,
         plot = _c(plot_area, "pieChart")
         _c(plot, "varyColors", val="1")
         needs_value_axis = False
+    elif chart_type == "scatter":
+        plot = _c(plot_area, "scatterChart")
+        _c(plot, "scatterStyle", val="lineMarker")
+        _c(plot, "varyColors", val="0")
+        needs_value_axis = False
+
     else:
         raise ValueError(f"Chart type not yet supported in engine: {chart_type}")
 
+
     # --- series ---
-    for idx, series in enumerate(series_list):
-        ser = _c(plot, "ser")
-        _c(ser, "idx", val=idx)
-        _c(ser, "order", val=idx)
-        name_col = chr(ord("B") + idx)
-        _str_ref(ser, "tx", f"Sheet1!${name_col}$1", [series["name"]])
-        if chart_type != "pie":
+    x_ax_id, y_ax_id = "111111111", "222222222"
+
+    if chart_type == "scatter":
+        for idx, series in enumerate(series_list):
+            ser = _c(plot, "ser")
+            _c(ser, "idx", val=idx)
+            _c(ser, "order", val=idx)
+            x_col = chr(ord("A") + idx * 2)
+            y_col = chr(ord("A") + idx * 2 + 1)
+            _str_ref(ser, "tx", f"Sheet1!${y_col}$1", [series["name"]])
             sp_pr = _c(ser, "spPr")
-            tone = series.get("tone") or palette[idx % len(palette)]
-            if chart_type == "line":
-                ln = etree.SubElement(sp_pr, qn("a", "ln"))
-                ln.append(make_solid_fill(tone))
-            else:
-                # fill per finish.fillMode
-                fill_mode = finish.get("fillMode", "solid")
-                if fill_mode == "gradient":
-                    sp_pr.append(make_gradient_fill(tone)),
-                elif fill_mode == "tinted":
-                    sp_pr.append(make_solid_fill(tone, {"lumMod": 60000, "lumOff": 40000}))
+            ln = etree.SubElement(sp_pr, qn("a", "ln"))
+            ln.append(make_solid_fill(series.get("tone") or palette[idx % len(palette)]))
+            m = len(series["xy"])
+            x_ref = f"Sheet1!${x_col}$2:${x_col}${m + 1}"
+            y_ref = f"Sheet1!${y_col}$2:${y_col}${m + 1}"
+            _num_ref(ser, "xVal", x_ref, [p[0] for p in series["xy"]])
+            _num_ref(ser, "yVal", y_ref, [p[1] for p in series["xy"]])
+        _c(plot, "axId", val=x_ax_id)
+        _c(plot, "axId", val=y_ax_id)
+        # two value axes
+        for ax_id, pos, cross in ((x_ax_id, "b", y_ax_id), (y_ax_id, "l", x_ax_id)):
+            ax = _c(plot_area, "valAx")
+            _c(ax, "axId", val=ax_id)
+            sc = _c(ax, "scaling"); _c(sc, "orientation", val="minMax")
+            _c(ax, "delete", val="0"); _c(ax, "axPos", val=pos)
+            if style.get("gridlines") == "major" and pos == "l":
+                _c(ax, "majorGridlines")
+            _c(ax, "crossAx", val=cross)
+    else:   
+        for idx, series in enumerate(series_list):
+            ser = _c(plot, "ser")
+            _c(ser, "idx", val=idx)
+            _c(ser, "order", val=idx)
+            name_col = chr(ord("B") + idx)
+            _str_ref(ser, "tx", f"Sheet1!${name_col}$1", [series["name"]])
+            if chart_type != "pie":
+                sp_pr = _c(ser, "spPr")
+                tone = series.get("tone") or palette[idx % len(palette)]
+                if chart_type == "line":
+                    ln = etree.SubElement(sp_pr, qn("a", "ln"))
+                    ln.append(make_solid_fill(tone))
                 else:
-                    sp_pr.append(make_solid_fill(tone))
-                
-                # border per finish.border
-                border = finish.get("border")
-                if border:
-                    color = tone if border.get("color") == "tone" else border.get("color", "dk2")
-                    sp_pr.append(make_ln(
-                        UnitConverter.to_emu(border.get("width", "1pt")),
-                        color,
-                    ))
-                
-                # shadow per finish.shadow
-                shadow = finish.get("shadow")
-                if shadow:
-                    sp_pr.append(make_effect_list({
-                        "blurRad": UnitConverter.to_emu(shadow["blur"]),
-                        "dist": UnitConverter.to_emu(shadow["dist"]),
-                        "dir": shadow["dir"],
-                        "alpha": shadow["alpha"],
-                    }))
+                    # fill per finish.fillMode
+                    fill_mode = finish.get("fillMode", "solid")
+                    if fill_mode == "gradient":
+                        sp_pr.append(make_gradient_fill(tone)),
+                    elif fill_mode == "tinted":
+                        sp_pr.append(make_solid_fill(tone, {"lumMod": 60000, "lumOff": 40000}))
+                    else:
+                        sp_pr.append(make_solid_fill(tone))
+                    
+                    # border per finish.border
+                    border = finish.get("border")
+                    if border:
+                        color = tone if border.get("color") == "tone" else border.get("color", "dk2")
+                        sp_pr.append(make_ln(
+                            UnitConverter.to_emu(border.get("width", "1pt")),
+                            color,
+                        ))
+                    
+                    # shadow per finish.shadow
+                    shadow = finish.get("shadow")
+                    if shadow:
+                        sp_pr.append(make_effect_list({
+                            "blurRad": UnitConverter.to_emu(shadow["blur"]),
+                            "dist": UnitConverter.to_emu(shadow["dist"]),
+                            "dir": shadow["dir"],
+                            "alpha": shadow["alpha"],
+                        }))
 
 
-        _str_ref(ser, "cat", cat_ref, categories)
-        _num_ref(ser, "val", f"Sheet1!${name_col}$2:${name_col}${n+1}", series["values"])
-        if chart_type == "line":
-            _c(ser, "smooth", val="0")
+            _str_ref(ser, "cat", cat_ref, categories)
+            _num_ref(ser, "val", f"Sheet1!${name_col}$2:${name_col}${n+1}", series["values"])
+            if chart_type == "line":
+                _c(ser, "smooth", val="0")
 
     # --- axis ids on plot element (pie has none) ---
     if needs_value_axis:
@@ -210,7 +247,7 @@ def emit_chart(shape_data, slide_state, relationships, content_types):
     chart_index = chart_part_path.rsplit("chart", 1)[-1].split(".")[0]
     workbook_path = f"xl/embeddings/Microsoft_Excel_Worksheet{chart_index}.xlsx"
 
-    slide_state.chart_parts[workbook_path] = build_chart_workbook_bytes(categories, series_list)
+    slide_state.chart_parts[workbook_path] = build_chart_workbook_bytes(categories, series_list, chart_type)
     content_types.add_override(workbook_path, ContentTypeRegistry.SPREADSHEET)
     
     workbook_rid = relationships.add(

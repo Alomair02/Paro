@@ -932,7 +932,7 @@ class TranspilerIntegrationTests(unittest.TestCase):
         result = transpile_deck(source_path, output_path)
 
         presentation = PptxPresentation(str(result.pptx_path))
-        self.assertEqual(len(presentation.slides), 4)
+        self.assertEqual(len(presentation.slides), 5)
         self.assertFalse([issue for issue in result.validation_issues if issue.severity == "error"])
 
         CHART_NS = "http://schemas.openxmlformats.org/drawingml/2006/chart"
@@ -944,8 +944,8 @@ class TranspilerIntegrationTests(unittest.TestCase):
             # 1. chart parts + embedded workbooks exist, one per chart
             chart_parts = sorted(n for n in names if n.startswith("ppt/charts/chart") and n.endswith(".xml"))
             workbooks = sorted(n for n in names if n.startswith("xl/embeddings/") and n.endswith(".xlsx"))
-            self.assertEqual(len(chart_parts), 4)
-            self.assertEqual(len(workbooks), 4)
+            self.assertEqual(len(chart_parts), 5)
+            self.assertEqual(len(workbooks), 5)
 
             # 2. correct plot element per chart type
             plot_elements = []
@@ -960,6 +960,7 @@ class TranspilerIntegrationTests(unittest.TestCase):
             self.assertIn("lineChart", flat_plots)
             self.assertIn("pieChart", flat_plots)
             self.assertIn("areaChart", flat_plots)
+            self.assertIn("scatterChart", flat_plots)
 
             # 3. cache == workbook for the first chart (the invariant)
             self._assert_cache_matches_workbook(pptx, chart_parts[0], workbooks, ns)

@@ -416,14 +416,25 @@ class LayoutResolver:
         series = []
         for s in series_nodes:
             points = [p for p in s.children if p.kind == "point"]
-            values = [self._chart_number(p.attrs["value"]) for p in points]
-            if not categories:
-                categories = [p.attrs.get("cat", "") for p in points]
-            series.append({
-                "name": s.attrs["name"],
-                "tone": s.attrs.get("tone"),
-                "values": values,
-            })
+            if chart_type == "scatter":
+                xy = [
+                    (self._chart_number(p.attrs["x"]), self._chart_number(p.attrs["y"]))
+                    for p in points
+                ]
+                series.append({
+                    "name": s.attrs["name"],
+                    "tone": s.attrs.get("tone"),
+                    "xy": xy,
+                })
+            else:
+                values = [self._chart_number(p.attrs["value"]) for p in points]
+                if not categories:
+                    categories = [p.attrs.get("cat", "") for p in points]
+                series.append({
+                    "name": s.attrs["name"],
+                    "tone": s.attrs.get("tone"),
+                    "values": values,
+                })
         
         style = self.chart_style_registry.get(node.attrs.get("style"))
         finish = self.chart_style_registry.get_finish(node.attrs.get("finish", style.get("finish",)))
