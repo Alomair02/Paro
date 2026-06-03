@@ -399,7 +399,7 @@ class LayoutResolver:
         actual_box = self._box_for_node(node, box)
 
         chart_type = node.attrs["type"]
-        if chart_type not in {"bar", "column", "line", "pie", "area", "scatter"}:
+        if chart_type not in {"bar", "column", "line", "pie", "area", "scatter", "combo"}:
             raise ValueError(f"Unsupported chart type: {chart_type}")
         
         # categories: a comma string in the <categories> child's text
@@ -433,6 +433,8 @@ class LayoutResolver:
                 series.append({
                     "name": s.attrs["name"],
                     "tone": s.attrs.get("tone"),
+                    "type": s.attrs.get("type"),
+                    "axis": s.attrs.get("axis", "primary"),
                     "values": values,
                 })
         
@@ -446,7 +448,7 @@ class LayoutResolver:
             "title": node.attrs.get("title"),
             "categories": categories,
             "series": series,
-            "stacked": node.attrs.get("stacked", "false").lower() == "true",
+            "stacked": node.attrs.get("stacked", "false").lower(),
             "legend": node.attrs.get("legend"),
             "style": style,
             "finish": finish,

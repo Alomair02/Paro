@@ -932,7 +932,7 @@ class TranspilerIntegrationTests(unittest.TestCase):
         result = transpile_deck(source_path, output_path)
 
         presentation = PptxPresentation(str(result.pptx_path))
-        self.assertEqual(len(presentation.slides), 5)
+        self.assertEqual(len(presentation.slides), 6)
         self.assertFalse([issue for issue in result.validation_issues if issue.severity == "error"])
 
         CHART_NS = "http://schemas.openxmlformats.org/drawingml/2006/chart"
@@ -944,8 +944,8 @@ class TranspilerIntegrationTests(unittest.TestCase):
             # 1. chart parts + embedded workbooks exist, one per chart
             chart_parts = sorted(n for n in names if n.startswith("ppt/charts/chart") and n.endswith(".xml"))
             workbooks = sorted(n for n in names if n.startswith("xl/embeddings/") and n.endswith(".xlsx"))
-            self.assertEqual(len(chart_parts), 5)
-            self.assertEqual(len(workbooks), 5)
+            self.assertEqual(len(chart_parts), 6)
+            self.assertEqual(len(workbooks), 6)
 
             # 2. correct plot element per chart type
             plot_elements = []
@@ -980,6 +980,94 @@ class TranspilerIntegrationTests(unittest.TestCase):
             self.assertLessEqual(max(luminance), 100000)
 
         self.assertTrue(output_path.exists())
+
+    def test_combo_chart_groups_axes_and_cache(self):
+        from zipfile import ZipFile
+        import io
+        from openpyxl import load_workbook
+
+        source_path = Path("tests/fixtures/golden/charts_demo.xml")
+        output_path = Path("tests/fixtures/charts_demo.pptx")
+        transpile_deck(source_path, output_path)
+
+        CHART_NS = "http://schemas.openxmlformats.org/drawingml/2006/chart"
+        ns = dict(NSMAP, c=CHART_NS)
+
+        with ZipFile(output_path) as pptx:
+            names = pptx.namelist()
+            chart_parts = sorted(n for n in names if n.startswith("ppt/charts/chart") and n.endswith(".xml"))
+
+            # locate the combo part: the one plotArea with >1 chart-group element
+            combo_part = None
+            for part in chart_parts:
+                root = parse_xml(pptx.read(part).decode("utf-8"))
+                plot_area = root.find("c:chart/c:plotArea", ns)
+                groups = [c for c in plot_area if parse_xml_localname(c).endswith("Chart")]
+                if len(groups) > 1:
+                    combo_part = part
+                    combo_root = root
+                    combo_plot_area = plot_area
+                    combo_groups = groups
+                    break
+            self.assertIsNotNone(combo_part, "no combo chart part found")
+
+            # 1. exactly one barChart (2 ser) + one lineChart (1 ser); total ser == input count
+            by_kind = {parse_xml_localname(g): g for g in combo_groups}
+            self.assertEqual(sorted(by_kind), ["barChart", "lineChart"])
+            self.assertEqual(len(by_kind["barChart"].findall("c:ser", ns)), 2)
+            self.assertEqual(len(by_kind["lineChart"].findall("c:ser", ns)), 1)
+            total_ser = sum(len(g.findall("c:ser", ns)) for g in combo_groups)
+            self.assertEqual(total_ser, 3)   # <-- the assertion that catches the doubling bug
+
+            # 2. four distinct axis ids; every plot-group axId and every crossAx resolves
+            axes = [a for a in combo_plot_area if parse_xml_localname(a).endswith("Ax")]
+            axis_ids = [a.find("c:axId", ns).get("val") for a in axes]
+            self.assertEqual(len(axis_ids), 4)
+            self.assertEqual(len(set(axis_ids)), 4)   # distinct
+            axis_id_set = set(axis_ids)
+            for g in combo_groups:
+                for ax in g.findall("c:axId", ns):
+                    self.assertIn(ax.get("val"), axis_id_set)
+            for a in axes:
+                self.assertIn(a.find("c:crossAx", ns).get("val"), axis_id_set)
+
+            # 3. secondary valAx: axPos=r + crosses=max ; secondary catAx: delete=1
+            val_axes = [a for a in axes if parse_xml_localname(a) == "valAx"]
+            cat_axes = [a for a in axes if parse_xml_localname(a) == "catAx"]
+            self.assertTrue(any(
+                a.find("c:axPos", ns).get("val") == "r"
+                and a.find("c:crosses", ns) is not None
+                and a.find("c:crosses", ns).get("val") == "max"
+                for a in val_axes
+            ), "no secondary value axis on the right crossing at max")
+            self.assertTrue(any(
+                a.find("c:delete", ns).get("val") == "1" for a in cat_axes
+            ), "no hidden secondary category axis")
+
+            # 4. cache == workbook for the combo chart (paired by the chart's own r:id)
+            rels = parse_xml(pptx.read(f"ppt/charts/_rels/{Path(combo_part).name}.rels").decode("utf-8"))
+            rel_ns = {"r": "http://schemas.openxmlformats.org/package/2006/relationships"}
+            ext_rid = combo_root.find("c:externalData", ns).get(qn("r", "id"))
+            target = None
+            for rel in rels.findall("r:Relationship", rel_ns):
+                if rel.get("Id") == ext_rid:
+                    target = rel.get("Target")
+                    break
+            self.assertIsNotNone(target, "combo chart has no externalData relationship")
+            wb_name = "xl/embeddings/" + Path(target).name
+            cache_values = sorted(
+                float(v.text) for v in combo_root.findall(".//c:val/c:numRef/c:numCache/c:pt/c:v", ns)
+            )
+            ws = load_workbook(io.BytesIO(pptx.read(wb_name))).active
+            wb_values = []
+            col = 2
+            while ws.cell(row=2, column=col).value is not None:
+                r = 2
+                while ws.cell(row=r, column=col).value is not None:
+                    wb_values.append(float(ws.cell(row=r, column=col).value))
+                    r += 1
+                col += 1
+            self.assertEqual(cache_values, sorted(wb_values))
 
     def _assert_cache_matches_workbook(self, pptx, chart_part, workbooks, ns):
         """The chart's numCache values must equal the embedded workbook's cell values."""

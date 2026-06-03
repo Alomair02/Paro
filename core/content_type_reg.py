@@ -12,18 +12,21 @@ Description: A manifest of content types. This is a dictionary keyed by part pat
 class ContentTypeRegistry:
 
     # Content type strings - exact, case-sensitive
-    PRESENTATION  = "application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"
-    SLIDE         = "application/vnd.openxmlformats-officedocument.presentationml.slide+xml"
-    SLIDE_LAYOUT  = "application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml"
-    SLIDE_MASTER  = "application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml"
-    THEME         = "application/vnd.openxmlformats-officedocument.theme+xml"
-    PRES_PROPS    = "application/vnd.openxmlformats-officedocument.presentationml.presProps+xml"
-    VIEW_PROPS    = "application/vnd.openxmlformats-officedocument.presentationml.viewProps+xml"
-    TABLE_STYLES  = "application/vnd.openxmlformats-officedocument.presentationml.tableStyles+xml"
-    CORE_PROPS    = "application/vnd.openxmlformats-package.core-properties+xml"
-    APP_PROPS     = "application/vnd.openxmlformats-officedocument.extended-properties+xml"
-    CHART         = "application/vnd.openxmlformats-officedocument.drawingml.chart+xml"
-    SPREADSHEET   = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    PRESENTATION        = "application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"
+    SLIDE               = "application/vnd.openxmlformats-officedocument.presentationml.slide+xml"
+    SLIDE_LAYOUT        = "application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml"
+    SLIDE_MASTER        = "application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml"
+    THEME               = "application/vnd.openxmlformats-officedocument.theme+xml"
+    PRES_PROPS          = "application/vnd.openxmlformats-officedocument.presentationml.presProps+xml"
+    VIEW_PROPS          = "application/vnd.openxmlformats-officedocument.presentationml.viewProps+xml"
+    TABLE_STYLES        = "application/vnd.openxmlformats-officedocument.presentationml.tableStyles+xml"
+    CORE_PROPS          = "application/vnd.openxmlformats-package.core-properties+xml"
+    APP_PROPS           = "application/vnd.openxmlformats-officedocument.extended-properties+xml"
+    CHART               = "application/vnd.openxmlformats-officedocument.drawingml.chart+xml"
+    SPREADSHEET         = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    CHARTEX             = "application/vnd.ms-office.chartex+xml"
+    CHART_STYLE         = "application/vnd.ms-office.chartstyle+xml"
+    CHART_COLOR_STYLE   = "application/vnd.ms-office.chartcolorstyle+xml"
 
     def __init__(self):
         # Defaults cover all files of a given extension, e.g. "xml" → "application/xml"

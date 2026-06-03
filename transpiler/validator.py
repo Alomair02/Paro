@@ -95,6 +95,8 @@ class Validator:
             for block in slide.blocks:
                 if block.kind == "image":
                     self._validate_image_source(block, issues)
+                if block.kind == "chart":
+                    self._validate_chart(block, issues)
 
             free_blocks = [block for block in slide.blocks if block.parent_kind == "free"]
             for i, left in enumerate(free_blocks):
@@ -160,6 +162,77 @@ class Validator:
                     {"src": src},
                 )
             )
+    
+    def _validate_chart(self, block, issues: list[ValidationIssue]):
+        content = block.content or {}
+        chart_type = content.get("chart_type")
+        series = content.get("series", [])
+
+        if chart_type == "combo":
+            allowed = {"column", "bar", "line", "area"}
+
+            # rule 1: every combo series must declare a type
+            if any(s.get("type") is None for s in series):
+                issues.append(
+                    ValidationIssue(
+                        "error",
+                        "combo_series_type",
+                        "Every series in a combo chart must declare a type "
+                        "(column, bar, line, or area)",
+                    )
+                )
+
+            # rule 2: declared types must be in the cartesian set
+            for s in series:
+                t = s.get("type")
+                if t is not None and t not in allowed:
+                    issues.append(
+                        ValidationIssue(
+                            "error",
+                            "combo_series_type",
+                            f"Combo series type '{t}' is not supported "
+                            f"(allowed: {', '.join(sorted(allowed))})",
+                            {"type": t},
+                        )
+                    )
+
+            # rule 4: at least one series must anchor the primary axes
+            if series and all(s.get("axis", "primary") == "secondary" for s in series):
+                issues.append(
+                    ValidationIssue(
+                        "error",
+                        "combo_no_primary",
+                        "A combo chart needs at least one primary-axis series",
+                    )
+                )
+            # stacked combo: warn if nothing is actually stackable
+            stacked = (content.get("stacked") or "false")
+            if stacked in ("true", "percent"):
+                stackable = {"column", "bar", "area"}
+                if not any(s.get("type") in stackable for s in series):
+                    issues.append(
+                        ValidationIssue(
+                            "warning",
+                            "stacked_no_effect",
+                            "stacked has no effect: combo has no stackable (bar/area) series",
+                        )
+                    )
+        else:
+            # rule 3 (strict): per-series type is only valid in a combo chart
+            for s in series:
+                if s.get("type") is not None:
+                    issues.append(
+                        ValidationIssue(
+                            "error",
+                            "series_type_outside_combo",
+                            f"Series '{s.get('name')}' carries type='{s.get('type')}' "
+                            f"but the chart is '{chart_type}', not combo; "
+                            "per-series type is only valid in a combo chart",
+                            {"type": s.get("type")},
+                        )
+                    )
+            
+                    
 
     def _overlaps(self, left: Box, right: Box) -> bool:
         return not (

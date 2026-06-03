@@ -14,20 +14,23 @@ class RelationshipRegistry:
     PACKAGE_ROOT = ""
 
     # Relationship type URIs
-    OFFICE_DOC    = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument"
-    SLIDE         = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide"
-    SLIDE_LAYOUT  = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout"
-    SLIDE_MASTER  = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster"
-    THEME         = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme"
-    IMAGE         = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image"
-    HYPERLINK     = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink"
-    PRES_PROPS    = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/presProps"
-    VIEW_PROPS    = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/viewProps"
-    TABLE_STYLES  = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/tableStyles"
-    CORE_PROPERTIES = "http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties"
+    OFFICE_DOC          = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument"
+    SLIDE               = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide"
+    SLIDE_LAYOUT        = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout"
+    SLIDE_MASTER        = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster"
+    THEME               = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme"
+    IMAGE               = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image"
+    HYPERLINK           = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink"
+    PRES_PROPS          = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/presProps"
+    VIEW_PROPS          = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/viewProps"
+    TABLE_STYLES        = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/tableStyles"
+    CORE_PROPERTIES     = "http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties"
     EXTENDED_PROPERTIES = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties"
-    CHART         = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart"
-    PACKAGE       = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/package"
+    CHART               = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart"
+    PACKAGE             = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/package"
+    CHARTEX             = "http://schemas.microsoft.com/office/2014/relationships/chartEx"
+    CHART_STYLE         = "http://schemas.microsoft.com/office/2011/relationships/chartStyle"
+    CHART_COLOR_STYLE   = "http://schemas.microsoft.com/office/2011/relationships/chartColorStyle"
 
     def __init__(self):
         self.registry = {}
@@ -94,6 +97,9 @@ class RelationshipRegistry:
             RelationshipRegistry.EXTENDED_PROPERTIES,
             RelationshipRegistry.CHART,
             RelationshipRegistry.PACKAGE,
+            RelationshipRegistry.CHARTEX,
+            RelationshipRegistry.CHART_STYLE,
+            RelationshipRegistry.CHART_COLOR_STYLE,
         }
         if rel_type not in valid_types:
             raise ValueError(f"Invalid relationship type: {rel_type}")

@@ -30,4 +30,18 @@
       <series name="Set B" tone="accent2"><point x="1" y="2"/><point x="2" y="6"/><point x="3" y="8"/></series>
     </chart>
   </slide>
+  <slide layout="blank" flow="free">
+    <chart type="combo" style="clean" title="Revenue vs Margin" x="0.7in" y="0.7in" w="9in" h="5in">
+      <categories>EMEA, APAC, Americas</categories>
+      <series name="Revenue 2025" type="column" axis="primary" tone="accent1">
+        <point cat="EMEA" value="42"/><point cat="APAC" value="31"/><point cat="Americas" value="58"/>
+      </series>
+      <series name="Revenue 2026" type="column" axis="primary" tone="accent2">
+        <point cat="EMEA" value="50"/><point cat="APAC" value="38"/><point cat="Americas" value="64"/>
+      </series>
+      <series name="Margin %" type="line" axis="secondary" tone="accent3">
+        <point cat="EMEA" value="18"/><point cat="APAC" value="27"/><point cat="Americas" value="12"/>
+      </series>
+    </chart>
+  </slide>
 </deck>

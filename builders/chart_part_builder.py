@@ -73,8 +73,31 @@ def _num_ref(parent, tag, ref_formula, values):
         _c(pt, "v", text=str(v))
     return wrapper
 
+def _apply_bar_finish(sp_pr, tone, finish):
+    """Fill + border + shadow for a bar/column/area series mark, per finish."""
+    fill_mode = finish.get("fillMode", "solid")
+    if fill_mode == "gradient":
+        sp_pr.append(make_gradient_fill(tone))
+    elif fill_mode == "tinted":
+        sp_pr.append(make_solid_fill(tone, {"lumMod": 60000, "lumOff": 40000}))
+    else:
+        sp_pr.append(make_solid_fill(tone))
 
-def build_chart_part_xml(workbook_rid: str, categories: list, series_list: list, chart_type: str = "column", style: dict | None = None, finish: dict | None = None) -> str:
+    border = finish.get("border")
+    if border:
+        color = tone if border.get("color") == "tone" else border.get("color", "dk2")
+        sp_pr.append(make_ln(UnitConverter.to_emu(border.get("width", "1pt")), color))
+
+    shadow = finish.get("shadow")
+    if shadow:
+        sp_pr.append(make_effect_list({
+            "blurRad": UnitConverter.to_emu(shadow["blur"]),
+            "dist": UnitConverter.to_emu(shadow["dist"]),
+            "dir": shadow["dir"],
+            "alpha": shadow["alpha"],
+        }))
+
+def build_chart_part_xml(workbook_rid: str, categories: list, series_list: list, chart_type: str = "column", style: dict | None = None, finish: dict | None = None, stacked: str = "false") -> str:
     """
     series_list: [{"name": str, "values": [num], "tone": str|None}, ...]
     chart_type: column|bar|line|area|pie
@@ -82,10 +105,17 @@ def build_chart_part_xml(workbook_rid: str, categories: list, series_list: list,
     style = style or {}
     finish = finish or {}
     palette = style.get("palette") or ["accent1", "accent2", "accent3", "accent4", "accent5", "accent6"]
-
+    # Fresh per chart part: dispenses 111111111, 222222222, 333333333, 444444444
+    # in call order. One allocator per build_chart_part_xml call, so ids never
+    # leak across charts and single-plot charts always emit the same first two.
+    _next_axis_id = [0]
+    def alloc_axis_id() -> str:
+        _next_axis_id[0] += 1
+        return str(111111111 * _next_axis_id[0])
+    
     n = len(categories)
     cat_ref = f"Sheet1!$A$2:$A${n+1}"
-    cat_ax_id, val_ax_id = "111111111", "222222222"
+    cat_ax_id, val_ax_id = alloc_axis_id(), alloc_axis_id()
 
     root = etree.Element(cqn("chartSpace"), nsmap=CHART_NSMAP)
     chart = _c(root, "chart")
@@ -93,7 +123,92 @@ def build_chart_part_xml(workbook_rid: str, categories: list, series_list: list,
     _c(plot_area, "layout")
 
     # --- plot-type element ---
-    if chart_type in ("column", "bar"):
+    if chart_type == "combo":
+        needs_value_axis = False   # combo emits its own axes inline; skip the single-plot tail
+
+        PLOT_ELEMENT = {"column": "barChart", "bar": "barChart",
+                        "line": "lineChart", "area": "areaChart"}
+        BAR_DIR = {"column": "col", "bar": "bar"}
+
+        uses_secondary = any(s.get("axis", "primary") == "secondary" for s in series_list)
+        pri_cat, pri_val = alloc_axis_id(), alloc_axis_id()
+        sec_val = sec_cat = None
+        if uses_secondary:
+            sec_val, sec_cat = alloc_axis_id(), alloc_axis_id()
+
+        def axis_pair(axis):
+            return (sec_cat, sec_val) if axis == "secondary" else (pri_cat, pri_val)
+
+        groups, order = {}, []
+        for gidx, s in enumerate(series_list):
+            bucket = s["type"] if s["type"] in ("column", "bar") else PLOT_ELEMENT[s["type"]]
+            key = (bucket, s.get("axis", "primary"))
+            if key not in groups:
+                groups[key] = []
+                order.append(key)
+            groups[key].append((gidx, s))
+
+        for key in order:
+            first_type = groups[key][0][1]["type"]
+            element = PLOT_ELEMENT[first_type]
+            plot = _c(plot_area, element)
+            if element == "barChart":
+                _c(plot, "barDir", val=BAR_DIR[first_type])
+            if element in ("barChart", "areaChart") and stacked in ("true", "percent"):
+                _c(plot, "grouping", val="percentStacked" if stacked == "percent" else "stacked")
+            else:
+                _c(plot, "grouping", val="clustered" if element == "barChart" else "standard")
+            _c(plot, "varyColors", val="0")
+
+            for gidx, s in groups[key]:
+                ser = _c(plot, "ser")
+                _c(ser, "idx", val=gidx)
+                _c(ser, "order", val=gidx)
+                name_col = chr(ord("B") + gidx)
+                _str_ref(ser, "tx", f"Sheet1!${name_col}$1", [s["name"]])
+                tone = s.get("tone") or palette[gidx % len(palette)]
+                sp_pr = _c(ser, "spPr")
+                if element == "lineChart":
+                    ln = etree.SubElement(sp_pr, qn("a", "ln"))
+                    ln.append(make_solid_fill(tone))
+                else:
+                    _apply_bar_finish(sp_pr, tone, finish)
+                _str_ref(ser, "cat", cat_ref, categories)
+                _num_ref(ser, "val", f"Sheet1!${name_col}$2:${name_col}${n+1}", s["values"])
+                if element == "lineChart":
+                    _c(ser, "smooth", val="0")
+
+            if element == "barChart" and stacked in ("true", "percent"):
+                _c(plot, "overlap", val="100")
+            gcat, gval = axis_pair(key[1])
+            _c(plot, "axId", val=gcat)
+            _c(plot, "axId", val=gval)
+
+        def emit_cat_ax(ax_id, cross, delete="0"):
+            ax = _c(plot_area, "catAx")
+            _c(ax, "axId", val=ax_id)
+            sc = _c(ax, "scaling"); _c(sc, "orientation", val="minMax")
+            _c(ax, "delete", val=delete); _c(ax, "axPos", val="b")
+            _c(ax, "crossAx", val=cross)
+
+        def emit_val_ax(ax_id, cross, pos, gridlines=False, crosses=None):
+            ax = _c(plot_area, "valAx")
+            _c(ax, "axId", val=ax_id)
+            sc = _c(ax, "scaling"); _c(sc, "orientation", val="minMax")
+            _c(ax, "delete", val="0"); _c(ax, "axPos", val=pos)
+            if gridlines:
+                _c(ax, "majorGridlines")
+            _c(ax, "crossAx", val=cross)
+            if crosses:
+                _c(ax, "crosses", val=crosses)
+
+        emit_cat_ax(pri_cat, pri_val)
+        emit_val_ax(pri_val, pri_cat, "l", gridlines=(style.get("gridlines") == "major"))
+        if uses_secondary:
+            emit_val_ax(sec_val, sec_cat, "r", crosses="max")
+            emit_cat_ax(sec_cat, sec_val, delete="1")
+
+    elif chart_type in ("column", "bar"):
         plot = _c(plot_area, "barChart")
         _c(plot, "barDir", val="col" if chart_type == "column" else "bar")
         _c(plot, "grouping", val="clustered")
@@ -124,9 +239,11 @@ def build_chart_part_xml(workbook_rid: str, categories: list, series_list: list,
 
 
     # --- series ---
-    x_ax_id, y_ax_id = "111111111", "222222222"
-
-    if chart_type == "scatter":
+    if chart_type == "combo":
+        pass
+    
+    elif chart_type == "scatter":
+        x_ax_id, y_ax_id = alloc_axis_id(), alloc_axis_id()
         for idx, series in enumerate(series_list):
             ser = _c(plot, "ser")
             _c(ser, "idx", val=idx)
@@ -243,6 +360,7 @@ def emit_chart(shape_data, slide_state, relationships, content_types):
     chart_type = shape_data.get("chart_type", "column")
     style = shape_data.get("style", {})
     finish = shape_data.get("finish")
+    stacked = shape_data.get("stacked", "false")
     chart_part_path = slide_state.next_chart_path()
     chart_index = chart_part_path.rsplit("chart", 1)[-1].split(".")[0]
     workbook_path = f"xl/embeddings/Microsoft_Excel_Worksheet{chart_index}.xlsx"
@@ -256,7 +374,7 @@ def emit_chart(shape_data, slide_state, relationships, content_types):
         RelationshipRegistry.PACKAGE,
     )
 
-    slide_state.chart_parts[chart_part_path] = build_chart_part_xml(workbook_rid, categories, series_list, chart_type, style, finish)
+    slide_state.chart_parts[chart_part_path] = build_chart_part_xml(workbook_rid, categories, series_list, chart_type, style, finish, stacked)
     content_types.add_override(chart_part_path, ContentTypeRegistry.CHART)
 
     rid = relationships.add(
@@ -291,4 +409,9 @@ def emit_chart(shape_data, slide_state, relationships, content_types):
 
 
 if __name__ == "__main__":
-    print(build_chart_part_xml("rId1", ["EMEA", "APAC", "Americas"], [42, 31, 58], "2025"))
+    print(build_chart_part_xml(
+        "rId1",
+        ["EMEA", "APAC", "Americas"],
+        [{"name": "2025", "values": [42, 31, 58], "tone": "accent1"}],
+        "column",
+    ))

@@ -119,7 +119,7 @@ ALLOWED_ATTRS = {
     | GRID_PLACEMENT_ATTRS
     | GEOMETRY_ATTRS,
     "categories": set(),
-    "series": {"name", "tone", "axis"},
+    "series": {"name", "tone", "type","axis"},
     "point": {"cat", "value", "x", "y"},
 }
 

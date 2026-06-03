@@ -61,10 +61,12 @@ class SlideState:
     )
     _next_media_index: int = 1
     _next_chart_index: int = 1
+    _next_chartex_index: int = 1
 
     def __post_init__(self):
-        self._next_media_index = self._infer_next_media_index()
-        self._next_chart_index = self._infer_next_chart_index()
+        self._next_media_index   = self._infer_next_media_index()
+        self._next_chart_index   = self._infer_next_chart_index()
+        self._next_chartex_index = self._infer_next_chartex_index()
 
     def next_id(self) -> int:
         """Return the next unique shape ID for this slide."""
@@ -77,6 +79,12 @@ class SlideState:
         self._next_chart_index += 1
         return chart_index
     
+    def next_chartex_index(self) -> int:
+        """Return the next unique chartEx index for this presentation."""
+        chartex_index = self._next_chartex_index
+        self._next_chartex_index += 1
+        return chartex_index
+    
     def next_chart_path(self) -> str:
         """Allocate the next available ppt/charts/chartN.xml package path."""
         chart_index = self.next_chart_index()
@@ -85,6 +93,15 @@ class SlideState:
             chart_index = self.next_chart_index()
             chart_path = f"ppt/charts/chart{chart_index}.xml"
         return chart_path
+    
+    def next_chartex_path(self) -> str:
+        """Allocate the next available ppt/charts/chartExN.xml package path."""
+        chartex_index = self.next_chartex_index()
+        chartex_path = f"ppt/charts/chartEx{chartex_index}.xml"
+        while chartex_path in self.chart_parts:
+            chartex_index = self.next_chartex_index()
+            chartex_path = f"ppt/charts/chartEx{chartex_index}.xml"
+        return chartex_path
     
     def _infer_next_chart_index(self) -> int:
         prefix = "ppt/charts/chart"
@@ -95,6 +112,19 @@ class SlideState:
             stem = Path(chart_path).stem
             try:
                 highest = max(highest, int(stem.removeprefix("chart")))
+            except ValueError:
+                continue
+        return highest + 1
+    
+    def _infer_next_chartex_index(self) -> int:
+        prefix = "ppt/charts/chartEx"
+        highest = 0
+        for chartex_path in self.chart_parts:
+            if not chartex_path.startswith(prefix):
+                continue
+            stem = Path(chartex_path).stem
+            try:
+                highest = max(highest, int(stem.removeprefix("chartEx")))
             except ValueError:
                 continue
         return highest + 1
