@@ -28,13 +28,19 @@ def build_chart_workbook_bytes(categories, series_list, chart_type="column") -> 
                 ws[f"{x_col}{r_idx}"] = xv
                 ws[f"{y_col}{r_idx}"] = yv
     else:
-        for i, cat in enumerate(categories, start=2):
-            ws[f"A{i}"] = cat
-        for s_idx, series in enumerate(series_list):
-            col = chr(ord("B") + s_idx)
-            ws[f"{col}1"] = series["name"]
-            for r_idx, val in enumerate(series["values"], start=2):
-                ws[f"{col}{r_idx}"] = val
+        if not categories:
+            ws["A1"] = series_list[0]["name"]   # A1 = series name (part's tx references $A$1)
+            # no-category types (histogram): raw values in column A
+            for r_idx, val in enumerate(series_list[0]["values"], start=2):
+                ws[f"A{r_idx}"] = val
+        else:
+            for i, cat in enumerate(categories, start=2):
+                ws[f"A{i}"] = cat
+            for s_idx, series in enumerate(series_list):
+                col = chr(ord("B") + s_idx)
+                ws[f"{col}1"] = series["name"]
+                for r_idx, val in enumerate(series["values"], start=2):
+                    ws[f"{col}{r_idx}"] = val
 
     buffer = io.BytesIO()
     wb.save(buffer)

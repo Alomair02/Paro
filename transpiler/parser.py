@@ -120,7 +120,7 @@ ALLOWED_ATTRS = {
     | GEOMETRY_ATTRS,
     "categories": set(),
     "series": {"name", "tone", "type","axis"},
-    "point": {"cat", "value", "x", "y"},
+    "point": {"cat", "value", "x", "y", "subtotal"},
 }
 
 REQUIRED_ATTRS = {

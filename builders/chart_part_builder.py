@@ -97,7 +97,7 @@ def _apply_bar_finish(sp_pr, tone, finish):
             "alpha": shadow["alpha"],
         }))
 
-def build_chart_part_xml(workbook_rid: str, categories: list, series_list: list, chart_type: str = "column", style: dict | None = None, finish: dict | None = None, stacked: str = "false") -> str:
+def build_chart_part_xml(workbook_rid: str, categories: list, series_list: list, chart_type: str = "column", style: dict | None = None, finish: dict | None = None, stacked: str = "false", legend: str | None = None) -> str:
     """
     series_list: [{"name": str, "values": [num], "tone": str|None}, ...]
     chart_type: column|bar|line|area|pie
@@ -340,7 +340,9 @@ def build_chart_part_xml(workbook_rid: str, categories: list, series_list: list,
 
     # --- legend, plotVisOnly, externalData ---
     
-    legend_pos = style.get("legendPos", "b")
+    # DSL `legend` (t/b/l/r/none) overrides the style's legendPos; classic charts
+    # support all four positions (chartEx only verified for t/none).
+    legend_pos = legend or style.get("legendPos", "b")
     if legend_pos != "none":
         legend = _c(chart, "legend")
         _c(legend, "legendPos", val=legend_pos)
@@ -361,6 +363,7 @@ def emit_chart(shape_data, slide_state, relationships, content_types):
     style = shape_data.get("style", {})
     finish = shape_data.get("finish")
     stacked = shape_data.get("stacked", "false")
+    legend = shape_data.get("legend")
     chart_part_path = slide_state.next_chart_path()
     chart_index = chart_part_path.rsplit("chart", 1)[-1].split(".")[0]
     workbook_path = f"xl/embeddings/Microsoft_Excel_Worksheet{chart_index}.xlsx"
@@ -374,7 +377,14 @@ def emit_chart(shape_data, slide_state, relationships, content_types):
         RelationshipRegistry.PACKAGE,
     )
 
-    slide_state.chart_parts[chart_part_path] = build_chart_part_xml(workbook_rid, categories, series_list, chart_type, style, finish, stacked)
+    slide_state.chart_parts[chart_part_path] = build_chart_part_xml(workbook_rid=workbook_rid,
+                                                                     categories=categories,
+                                                                       series_list=series_list,
+                                                                         chart_type=chart_type,
+                                                                           style=style,
+                                                                             finish=finish,
+                                                                               stacked=stacked,
+                                                                               legend=legend)
     content_types.add_override(chart_part_path, ContentTypeRegistry.CHART)
 
     rid = relationships.add(

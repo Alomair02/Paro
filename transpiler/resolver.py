@@ -399,7 +399,9 @@ class LayoutResolver:
         actual_box = self._box_for_node(node, box)
 
         chart_type = node.attrs["type"]
-        if chart_type not in {"bar", "column", "line", "pie", "area", "scatter", "combo"}:
+        CLASSIC = {"bar", "column", "line", "pie", "area", "scatter", "combo"}
+        CHARTEX = {"funnel", "waterfall", "histogram", "boxWhisker"}
+        if chart_type not in CLASSIC | CHARTEX:
             raise ValueError(f"Unsupported chart type: {chart_type}")
         
         # categories: a comma string in the <categories> child's text
@@ -428,8 +430,8 @@ class LayoutResolver:
                 })
             else:
                 values = [self._chart_number(p.attrs["value"]) for p in points]
-                if not categories:
-                    categories = [p.attrs.get("cat", "") for p in points]
+                if not categories and all("cat" in p.attrs for p in points):
+                    categories = [p.attrs["cat"] for p in points]
                 series.append({
                     "name": s.attrs["name"],
                     "tone": s.attrs.get("tone"),
@@ -437,17 +439,26 @@ class LayoutResolver:
                     "axis": s.attrs.get("axis", "primary"),
                     "values": values,
                 })
+                
+        # subtotal indices (waterfall): collected from the first series' points.
+        # Empty for every other type — the spec map decides who uses it.
+        first_points = [p for p in series_nodes[0].children if p.kind == "point"]
+        subtotals = [
+            i for i, p in enumerate(first_points)
+            if p.attrs.get("subtotal") == "true"
+        ]
         
         style = self.chart_style_registry.get(node.attrs.get("style"))
         finish = self.chart_style_registry.get_finish(node.attrs.get("finish", style.get("finish",)))
 
         shape = {
-            "type": "chart",
+            "type": chart_type if chart_type in CHARTEX else "chart",
             "name": node.attrs.get("title", "Chart"),
             "chart_type": chart_type,
             "title": node.attrs.get("title"),
             "categories": categories,
             "series": series,
+            "subtotals": subtotals,
             "stacked": node.attrs.get("stacked", "false").lower(),
             "legend": node.attrs.get("legend"),
             "style": style,

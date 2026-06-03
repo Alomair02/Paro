@@ -15,7 +15,7 @@ from builders.shape_emitters import (
     emit_text_box,
 )
 from builders.chart_part_builder import emit_chart
-from builders.chartex_part_builder import emit_funnel
+from builders.chartex_part_builder import emit_chartex
 from core.content_type_reg import ContentTypeRegistry
 from core.relationship_reg import RelationshipRegistry
 from core.xml_builder import qn, to_xml_string
@@ -116,9 +116,7 @@ class SlideBuilder:
             return emit_table(shape_data, slide_state, self.relationships)
         if shape_type == "chart":
             return emit_chart(shape_data, slide_state, self.relationships, self.content_types)
-        if shape_type == "funnel":
-            return emit_funnel(shape_data, slide_state, self.relationships, self.content_types)
-
-        
+        if shape_type in ("funnel", "waterfall", "histogram", "boxWhisker"):
+            return emit_chartex(shape_data, slide_state, self.relationships, self.content_types)
 
         raise ValueError(f"Unsupported shape type: {shape_type}")
