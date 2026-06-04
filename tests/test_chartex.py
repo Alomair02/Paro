@@ -11,7 +11,7 @@ from builders.deck_builder import SAMPLE_THEME, assemble_package
 from core.xml_builder import NSMAP, qn
 from tests.pptx_test_utils import parse_xml
 
-class TestChartExFunnel(unittest.TestCase):
+class TestChartEx(unittest.TestCase):
     def test_funnel_chartex_part_and_invariants(self):
 
         output_path = Path("tests/fixtures/funnel_chartex.pptx")
@@ -274,3 +274,60 @@ class TestChartExFunnel(unittest.TestCase):
             self.assertEqual(len(axes), 2)
             self.assertIsNotNone(axes[0].find("cx:catScaling", ns))
             self.assertIsNotNone(axes[1].find("cx:valScaling", ns))
+    
+    def test_pareto_chartex_invariants(self):
+        import random
+        output_path = Path("tests/fixtures/pareto_chartex.pptx")
+        random.seed(0)
+        cats = [f"Category {random.randint(1,4)}" for _ in range(50)]
+        slide_data = [{
+            "index": 1,
+            "shapes": [{
+                "type": "pareto",
+                "title": "Defect Causes",
+                "categories": cats,
+                "series": [{"name": "Count", "values": [1]*50}],
+            }],
+        }]
+        assemble_package(SAMPLE_THEME, slide_data, output_path)
+
+        CHARTEX_NS = "http://schemas.microsoft.com/office/drawing/2014/chartex"
+        ns = dict(NSMAP, cx=CHARTEX_NS)
+
+        with ZipFile(output_path) as pptx:
+            names = pptx.namelist()
+            chartex_part = next(n for n in names
+                                if n.startswith("ppt/charts/chartEx") and n.endswith(".xml"))
+            root = parse_xml(pptx.read(chartex_part).decode("utf-8"))
+
+            series = root.findall("cx:chart/cx:plotArea/cx:plotAreaRegion/cx:series", ns)
+            self.assertEqual(len(series), 2, "pareto = two series (bars + line)")
+
+            # series 0: clusteredColumn, has data + aggregation + axisId=1
+            bars = series[0]
+            self.assertEqual(bars.get("layoutId"), "clusteredColumn")
+            self.assertEqual(bars.find("cx:dataId", ns).get("val"), "0")
+            self.assertIsNotNone(bars.find("cx:layoutPr/cx:aggregation", ns), "bars need aggregation")
+            self.assertEqual(bars.find("cx:axisId", ns).get("val"), "1")
+
+            # series 1: paretoLine, DERIVED (ownerIdx, no dataId), axisId=2
+            line = series[1]
+            self.assertEqual(line.get("layoutId"), "paretoLine")
+            self.assertEqual(line.get("ownerIdx"), "0", "line derives from series 0")
+            self.assertIsNone(line.find("cx:dataId", ns), "derived line has no dataId")
+            self.assertEqual(line.find("cx:axisId", ns).get("val"), "2")
+
+            # three axes: cat(0), val count(1), val percentage(2)
+            axes = root.findall("cx:chart/cx:plotArea/cx:axis", ns)
+            self.assertEqual(len(axes), 3, "pareto has three axes")
+            self.assertIsNotNone(axes[0].find("cx:catScaling", ns))
+            self.assertIsNotNone(axes[1].find("cx:valScaling", ns))
+            pct = axes[2].find("cx:units", ns)
+            self.assertIsNotNone(pct, "third axis is the percentage axis")
+            self.assertEqual(pct.get("unit"), "percentage")
+
+            # shares histogram's style (verified md5)
+            rels = parse_xml(pptx.read(f"ppt/charts/_rels/{Path(chartex_part).name}.rels").decode("utf-8"))
+            rel_ns = {"r": "http://schemas.openxmlformats.org/package/2006/relationships"}
+            rel_types = sorted(r.get("Type") for r in rels.findall("r:Relationship", rel_ns))
+            self.assertEqual(len(rel_types), 3, "package + chartStyle + chartColorStyle")
