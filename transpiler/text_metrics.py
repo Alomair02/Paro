@@ -17,6 +17,7 @@ POINTS_TO_PIXELS = 96 / 72
 FONT_DIRS = (
     Path("/usr/share/fonts"),
     Path("/usr/local/share/fonts"),
+    Path.home() / ".local/share/fonts",
 )
 
 FAMILY_ALIASES = {
@@ -27,6 +28,12 @@ FAMILY_ALIASES = {
     "helvetica": "Liberation Sans",
 }
 
+_WEIGHT_TOKENS = {
+    "thin", "extralight", "ultralight", "light", "regular", "normal",
+    "medium", "semibold", "demibold", "bold", "extrabold", "ultrabold", "black", "heavy",
+}
+_STYLE_TOKENS = {"italic", "oblique"}
+_DEFAULT_WEIGHT = "regular"
 
 @dataclass(frozen=True)
 class TextMeasurement:
@@ -149,30 +156,45 @@ def resolve_font(font_family: str, *, bold: bool = False, italic: bool = False) 
         approximation_used=True,
     )
 
+def _decompose_stem(stem: str) -> tuple[str, str, bool]:
+    """Split a font file stem into (normalized_family, weight, italic).
+
+    'Aptos'                 -> ('aptos',        'regular', False)
+    'Aptos-Black'           -> ('aptos',        'black',   False)
+    'Aptos-Bold-Italic'     -> ('aptos',        'bold',    True)
+    'Aptos-Display'         -> ('aptosdisplay', 'regular', False)
+    'Aptos-Display-Bold'    -> ('aptosdisplay', 'bold',    False)
+    'Aptos-Serif-Italic'    -> ('aptosserif',   'regular', True)
+    """
+    parts = stem.replace("_", "-").replace(" ", "-").split("-")
+    family_parts: list[str] = []
+    weight = _DEFAULT_WEIGHT
+    italic = False
+    for part in parts:
+        low = part.lower()
+        if low in _STYLE_TOKENS:
+            italic = True
+        elif low in _WEIGHT_TOKENS:
+            weight = low
+        else:
+            family_parts.append(part)
+    return _normalize("".join(family_parts)), weight, italic
 
 def _find_font_path(font_family: str, *, bold: bool, italic: bool) -> Path | None:
-    normalized_family = _normalize(font_family)
-    candidates = [
-        path
-        for path in _font_catalog()
-        if normalized_family in _normalize(path.stem)
-    ]
-    if not candidates:
+    requested_family = _normalize(font_family)
+    requested_weight = "bold" if bold else _DEFAULT_WEIGHT
+
+    matches = []
+    for path in _font_catalog():
+        fam, weight, is_italic = _decompose_stem(path.stem)
+        if fam == requested_family and weight == requested_weight and is_italic == italic:
+            matches.append(path)
+
+    if not matches:
         return None
-
-    styled = [
-        path
-        for path in candidates
-        if _style_matches(path.stem, bold=bold, italic=italic)
-    ]
-    return sorted(styled or candidates, key=lambda path: str(path))[0]
-
-
-def _style_matches(stem: str, *, bold: bool, italic: bool) -> bool:
-    normalized = stem.lower()
-    has_bold = "bold" in normalized or "-bd" in normalized
-    has_italic = "italic" in normalized or "oblique" in normalized or "ita" in normalized
-    return has_bold == bold and has_italic == italic
+    # After exact family+weight+italic matching there should be exactly one match;
+    # sort is a deterministic tiebreak only (defensive against duplicate installs).
+    return sorted(matches, key=lambda p: str(p))[0]
 
 
 @lru_cache(maxsize=1)

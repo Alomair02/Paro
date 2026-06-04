@@ -116,7 +116,7 @@ class SlideBuilder:
             return emit_table(shape_data, slide_state, self.relationships)
         if shape_type == "chart":
             return emit_chart(shape_data, slide_state, self.relationships, self.content_types)
-        if shape_type in ("funnel", "waterfall", "histogram", "boxWhisker", "pareto"):
+        if shape_type in ("funnel", "waterfall", "histogram", "boxWhisker", "pareto", "treemap", "sunburst"):
             return emit_chartex(shape_data, slide_state, self.relationships, self.content_types)
 
         raise ValueError(f"Unsupported shape type: {shape_type}")

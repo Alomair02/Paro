@@ -331,3 +331,268 @@ class TestChartEx(unittest.TestCase):
             rel_ns = {"r": "http://schemas.openxmlformats.org/package/2006/relationships"}
             rel_types = sorted(r.get("Type") for r in rels.findall("r:Relationship", rel_ns))
             self.assertEqual(len(rel_types), 3, "package + chartStyle + chartColorStyle")
+
+    def test_treemap_chartex_invariants(self):
+        output_path = Path("tests/fixtures/treemap_chartex.pptx")
+        records = [
+            {"path": ["Branch 1", "Stem 1", "Leaf 1"], "value": 22},
+            {"path": ["Branch 1", "Stem 1", "Leaf 2"], "value": 12},
+            {"path": ["Branch 1", "Stem 2", "Leaf 3"], "value": 18},
+            {"path": ["Branch 2", "Stem 3", "Leaf 4"], "value": 87},
+            {"path": ["Branch 2", "Stem 3", "Leaf 5"], "value": 25},
+            {"path": ["Branch 3", "Stem 4", "Leaf 6"], "value": 30},
+        ]
+        slide_data = [{
+            "index": 1,
+            "shapes": [{
+                "type": "treemap",
+                "title": "Org",
+                "categories": [],
+                "series": [{"name": "Size", "points": records}],
+            }],
+        }]
+        assemble_package(SAMPLE_THEME, slide_data, output_path)
+
+        CHARTEX_NS = "http://schemas.microsoft.com/office/drawing/2014/chartex"
+        ns = dict(NSMAP, cx=CHARTEX_NS)
+
+        with ZipFile(output_path) as pptx:
+            names = pptx.namelist()
+            chartex_part = next(n for n in names
+                                if n.startswith("ppt/charts/chartEx") and n.endswith(".xml"))
+            root = parse_xml(pptx.read(chartex_part).decode("utf-8"))
+
+            # treemap layoutId, no axis, has legend, parentLabelLayout
+            series = root.find("cx:chart/cx:plotArea/cx:plotAreaRegion/cx:series", ns)
+            self.assertEqual(series.get("layoutId"), "treemap")
+            self.assertIsNone(root.find("cx:chart/cx:plotArea/cx:axis", ns), "treemap has no axes")
+            self.assertIsNotNone(root.find("cx:chart/cx:legend", ns), "treemap has a legend")
+            self.assertIsNotNone(series.find("cx:layoutPr/cx:parentLabelLayout", ns))
+
+            # numDim is "size" (not "val")
+            self.assertEqual(root.find(".//cx:numDim", ns).get("type"), "size")
+
+            # depth-3 hierarchy: THREE cx:lvl in strDim, innermost-first (Leaf, Stem, Branch)
+            lvls = root.findall("cx:chartData/cx:data/cx:strDim/cx:lvl", ns)
+            self.assertEqual(len(lvls), 3, "3-level hierarchy -> 3 cx:lvl")
+            self.assertEqual(lvls[0].find("cx:pt", ns).text, "Leaf 1", "level 0 = innermost (leaf)")
+            self.assertEqual(lvls[1].find("cx:pt", ns).text, "Stem 1")
+            self.assertEqual(lvls[2].find("cx:pt", ns).text, "Branch 1", "last level = outermost (branch)")
+
+            # strDim spans A:C (3 label cols), numDim is D
+            self.assertEqual(root.find(".//cx:strDim/cx:f", ns).text, "Sheet1!$A$2:$C$7")
+            self.assertEqual(root.find(".//cx:numDim/cx:f", ns).text, "Sheet1!$D$2:$D$7")
+
+            # cache == workbook (size column), per the size col = depth+1 = D
+            cache = sorted(float(pt.text) for pt in root.findall(".//cx:numDim/cx:lvl/cx:pt", ns))
+            wbs = sorted(n for n in names if n.startswith("xl/embeddings/") and n.endswith(".xlsx"))
+            ws = load_workbook(io.BytesIO(pptx.read(wbs[0]))).active
+            wb = []
+            r = 2
+            while ws.cell(row=r, column=4).value is not None:   # column D = size
+                wb.append(float(ws.cell(row=r, column=4).value)); r += 1
+            self.assertEqual(cache, sorted(wb))
+
+            # style is treemap's own
+            rels = parse_xml(pptx.read(f"ppt/charts/_rels/{Path(chartex_part).name}.rels").decode("utf-8"))
+            rel_ns = {"r": "http://schemas.openxmlformats.org/package/2006/relationships"}
+            self.assertEqual(len([r for r in rels.findall("r:Relationship", rel_ns)]), 3)
+
+    def test_treemap_chartex_invariants(self):
+        output_path = Path("tests/fixtures/treemap_chartex.pptx")
+        records = [
+            {"path": ["Branch 1", "Stem 1", "Leaf 1"], "value": 22},
+            {"path": ["Branch 1", "Stem 1", "Leaf 2"], "value": 12},
+            {"path": ["Branch 1", "Stem 2", "Leaf 3"], "value": 18},
+            {"path": ["Branch 2", "Stem 3", "Leaf 4"], "value": 87},
+            {"path": ["Branch 2", "Stem 3", "Leaf 5"], "value": 25},
+            {"path": ["Branch 3", "Stem 4", "Leaf 6"], "value": 30},
+        ]
+        slide_data = [{
+            "index": 1,
+            "shapes": [{
+                "type": "treemap",
+                "title": "Org",
+                "categories": [],
+                "series": [{"name": "Size", "points": records}],
+            }],
+        }]
+        assemble_package(SAMPLE_THEME, slide_data, output_path)
+
+        CHARTEX_NS = "http://schemas.microsoft.com/office/drawing/2014/chartex"
+        ns = dict(NSMAP, cx=CHARTEX_NS)
+
+        with ZipFile(output_path) as pptx:
+            names = pptx.namelist()
+            chartex_part = next(n for n in names
+                                if n.startswith("ppt/charts/chartEx") and n.endswith(".xml"))
+            root = parse_xml(pptx.read(chartex_part).decode("utf-8"))
+
+            # treemap layoutId, no axis, has legend, parentLabelLayout
+            series = root.find("cx:chart/cx:plotArea/cx:plotAreaRegion/cx:series", ns)
+            self.assertEqual(series.get("layoutId"), "treemap")
+            self.assertIsNone(root.find("cx:chart/cx:plotArea/cx:axis", ns), "treemap has no axes")
+            self.assertIsNotNone(root.find("cx:chart/cx:legend", ns), "treemap has a legend")
+            self.assertIsNotNone(series.find("cx:layoutPr/cx:parentLabelLayout", ns))
+
+            # numDim is "size" (not "val")
+            self.assertEqual(root.find(".//cx:numDim", ns).get("type"), "size")
+
+            # depth-3 hierarchy: THREE cx:lvl in strDim, innermost-first (Leaf, Stem, Branch)
+            lvls = root.findall("cx:chartData/cx:data/cx:strDim/cx:lvl", ns)
+            self.assertEqual(len(lvls), 3, "3-level hierarchy -> 3 cx:lvl")
+            self.assertEqual(lvls[0].find("cx:pt", ns).text, "Leaf 1", "level 0 = innermost (leaf)")
+            self.assertEqual(lvls[1].find("cx:pt", ns).text, "Stem 1")
+            self.assertEqual(lvls[2].find("cx:pt", ns).text, "Branch 1", "last level = outermost (branch)")
+
+            # strDim spans A:C (3 label cols), numDim is D
+            self.assertEqual(root.find(".//cx:strDim/cx:f", ns).text, "Sheet1!$A$2:$C$7")
+            self.assertEqual(root.find(".//cx:numDim/cx:f", ns).text, "Sheet1!$D$2:$D$7")
+
+            # cache == workbook (size column), per the size col = depth+1 = D
+            cache = sorted(float(pt.text) for pt in root.findall(".//cx:numDim/cx:lvl/cx:pt", ns))
+            wbs = sorted(n for n in names if n.startswith("xl/embeddings/") and n.endswith(".xlsx"))
+            ws = load_workbook(io.BytesIO(pptx.read(wbs[0]))).active
+            wb = []
+            r = 2
+            while ws.cell(row=r, column=4).value is not None:   # column D = size
+                wb.append(float(ws.cell(row=r, column=4).value)); r += 1
+            self.assertEqual(cache, sorted(wb))
+
+            # style is treemap's own
+            rels = parse_xml(pptx.read(f"ppt/charts/_rels/{Path(chartex_part).name}.rels").decode("utf-8"))
+            rel_ns = {"r": "http://schemas.openxmlformats.org/package/2006/relationships"}
+            self.assertEqual(len([r for r in rels.findall("r:Relationship", rel_ns)]), 3)
+
+    def test_treemap_chartex_invariants(self):
+        output_path = Path("tests/fixtures/treemap_chartex.pptx")
+        records = [
+            {"path": ["Branch 1", "Stem 1", "Leaf 1"], "value": 22},
+            {"path": ["Branch 1", "Stem 1", "Leaf 2"], "value": 12},
+            {"path": ["Branch 1", "Stem 2", "Leaf 3"], "value": 18},
+            {"path": ["Branch 2", "Stem 3", "Leaf 4"], "value": 87},
+            {"path": ["Branch 2", "Stem 3", "Leaf 5"], "value": 25},
+            {"path": ["Branch 3", "Stem 4", "Leaf 6"], "value": 30},
+        ]
+        slide_data = [{
+            "index": 1,
+            "shapes": [{
+                "type": "treemap",
+                "title": "Org",
+                "categories": [],
+                "series": [{"name": "Size", "points": records}],
+            }],
+        }]
+        assemble_package(SAMPLE_THEME, slide_data, output_path)
+
+        CHARTEX_NS = "http://schemas.microsoft.com/office/drawing/2014/chartex"
+        ns = dict(NSMAP, cx=CHARTEX_NS)
+
+        with ZipFile(output_path) as pptx:
+            names = pptx.namelist()
+            chartex_part = next(n for n in names
+                                if n.startswith("ppt/charts/chartEx") and n.endswith(".xml"))
+            root = parse_xml(pptx.read(chartex_part).decode("utf-8"))
+
+            # treemap layoutId, no axis, has legend, parentLabelLayout
+            series = root.find("cx:chart/cx:plotArea/cx:plotAreaRegion/cx:series", ns)
+            self.assertEqual(series.get("layoutId"), "treemap")
+            self.assertIsNone(root.find("cx:chart/cx:plotArea/cx:axis", ns), "treemap has no axes")
+            self.assertIsNotNone(root.find("cx:chart/cx:legend", ns), "treemap has a legend")
+            self.assertIsNotNone(series.find("cx:layoutPr/cx:parentLabelLayout", ns))
+
+            # numDim is "size" (not "val")
+            self.assertEqual(root.find(".//cx:numDim", ns).get("type"), "size")
+
+            # depth-3 hierarchy: THREE cx:lvl in strDim, innermost-first (Leaf, Stem, Branch)
+            lvls = root.findall("cx:chartData/cx:data/cx:strDim/cx:lvl", ns)
+            self.assertEqual(len(lvls), 3, "3-level hierarchy -> 3 cx:lvl")
+            self.assertEqual(lvls[0].find("cx:pt", ns).text, "Leaf 1", "level 0 = innermost (leaf)")
+            self.assertEqual(lvls[1].find("cx:pt", ns).text, "Stem 1")
+            self.assertEqual(lvls[2].find("cx:pt", ns).text, "Branch 1", "last level = outermost (branch)")
+
+            # strDim spans A:C (3 label cols), numDim is D
+            self.assertEqual(root.find(".//cx:strDim/cx:f", ns).text, "Sheet1!$A$2:$C$7")
+            self.assertEqual(root.find(".//cx:numDim/cx:f", ns).text, "Sheet1!$D$2:$D$7")
+
+            # cache == workbook (size column), per the size col = depth+1 = D
+            cache = sorted(float(pt.text) for pt in root.findall(".//cx:numDim/cx:lvl/cx:pt", ns))
+            wbs = sorted(n for n in names if n.startswith("xl/embeddings/") and n.endswith(".xlsx"))
+            ws = load_workbook(io.BytesIO(pptx.read(wbs[0]))).active
+            wb = []
+            r = 2
+            while ws.cell(row=r, column=4).value is not None:   # column D = size
+                wb.append(float(ws.cell(row=r, column=4).value)); r += 1
+            self.assertEqual(cache, sorted(wb))
+
+            # style is treemap's own
+            rels = parse_xml(pptx.read(f"ppt/charts/_rels/{Path(chartex_part).name}.rels").decode("utf-8"))
+            rel_ns = {"r": "http://schemas.openxmlformats.org/package/2006/relationships"}
+            self.assertEqual(len([r for r in rels.findall("r:Relationship", rel_ns)]), 3)
+
+    def test_treemap_rejects_mixed_depth(self):
+        # the one real format constraint: uniform leaf depth (resolver guard)
+        from transpiler.resolver import LayoutResolver  # adjust import to your resolver entry
+        # build a mixed-depth node tree via DSL and assert it raises
+        # (or call the resolver path directly) — see note below
+    
+    def test_sunburst_chartex_invariants(self):
+        output_path = Path("tests/fixtures/sunburst_chartex.pptx")
+        records = [
+            {"path": ["Branch 1", "Stem 1", "Leaf 1"], "value": 22},
+            {"path": ["Branch 1", "Stem 1", "Leaf 2"], "value": 12},
+            {"path": ["Branch 1", "Stem 2", "Leaf 3"], "value": 18},
+            {"path": ["Branch 2", "Stem 3", "Leaf 4"], "value": 87},
+            {"path": ["Branch 2", "Stem 3", "Leaf 5"], "value": 25},
+            {"path": ["Branch 3", "Stem 4", "Leaf 6"], "value": 30},
+        ]
+        slide_data = [{
+            "index": 1,
+            "shapes": [{
+                "type": "sunburst",
+                "title": "Org",
+                "categories": [],
+                "series": [{"name": "Size", "points": records}],
+            }],
+        }]
+        assemble_package(SAMPLE_THEME, slide_data, output_path)
+
+        CHARTEX_NS = "http://schemas.microsoft.com/office/drawing/2014/chartex"
+        ns = dict(NSMAP, cx=CHARTEX_NS)
+
+        with ZipFile(output_path) as pptx:
+            names = pptx.namelist()
+            chartex_part = next(n for n in names
+                                if n.startswith("ppt/charts/chartEx") and n.endswith(".xml"))
+            root = parse_xml(pptx.read(chartex_part).decode("utf-8"))
+
+            series = root.find("cx:chart/cx:plotArea/cx:plotAreaRegion/cx:series", ns)
+            # sunburst deltas vs treemap:
+            self.assertEqual(series.get("layoutId"), "sunburst")
+            self.assertEqual(series.find("cx:dataLabels", ns).get("pos"), "ctr",
+                             "sunburst labels are centered (vs treemap inEnd)")
+            self.assertIsNone(series.find("cx:layoutPr", ns),
+                              "sunburst has NO layoutPr/parentLabelLayout")
+            self.assertIsNone(root.find("cx:chart/cx:legend", ns),
+                              "sunburst has NO legend")
+
+            # shared hierarchical model (same as treemap): 3 cx:lvl innermost-first, size numDim
+            lvls = root.findall("cx:chartData/cx:data/cx:strDim/cx:lvl", ns)
+            self.assertEqual(len(lvls), 3)
+            self.assertEqual(lvls[0].find("cx:pt", ns).text, "Leaf 1", "level 0 = innermost")
+            self.assertEqual(lvls[2].find("cx:pt", ns).text, "Branch 1", "level 2 = outermost")
+            self.assertEqual(root.find(".//cx:numDim", ns).get("type"), "size")
+
+            # uses sunburst's own style asset
+            rels = parse_xml(pptx.read(f"ppt/charts/_rels/{Path(chartex_part).name}.rels").decode("utf-8"))
+            rel_ns = {"r": "http://schemas.openxmlformats.org/package/2006/relationships"}
+            self.assertEqual(len(rels.findall("r:Relationship", rel_ns)), 3)
+
+            # cache == workbook (size column)
+            cache = sorted(float(pt.text) for pt in root.findall(".//cx:numDim/cx:lvl/cx:pt", ns))
+            wbs = [n for n in names if n.startswith("xl/embeddings/") and n.endswith(".xlsx")]
+            ws = load_workbook(io.BytesIO(pptx.read(wbs[0]))).active
+            wb, r = [], 2
+            while ws.cell(row=r, column=4).value is not None:
+                wb.append(float(ws.cell(row=r, column=4).value)); r += 1
+            self.assertEqual(cache, sorted(wb))

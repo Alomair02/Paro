@@ -8,53 +8,12 @@ from pathlib import Path
 from lxml import etree
 from core.xml_builder import make_sub_element, to_xml_string, NSMAP, qn, make_paragraph, make_run 
 from builders.common import relationship_target
-from builders.chart_workbook import build_chart_workbook_bytes
+from builders.chart_workbook import build_chart_workbook_bytes, build_treemap_workbook_bytes
 from core.content_type_reg import ContentTypeRegistry
 from core.relationship_reg import RelationshipRegistry
 
 CHARTEX_NS = "http://schemas.microsoft.com/office/drawing/2014/chartex"
 CHARTEX_NSMAP = {"cx": CHARTEX_NS}
-
-CHARTEX_TYPES = {
-    "funnel": {
-        "layout_id": "funnel",
-        "style":     "funnel",
-        "axes":      lambda sd: None,            # None → builder's default single catScaling axis
-        "layout_pr": lambda sd: (lambda i: None),            # funnel series has no layoutPr
-        "data_labels": {"seriesName":"0","categoryName":"0","value":"1"},
-        "legend": None,
-        
-    },
-    "waterfall": {
-        "layout_id": "waterfall",
-        "style":     "waterfall",
-        "axes":      lambda sd: _two_axes("0.5"),
-        "layout_pr": lambda sd: (lambda i: _waterfall_layout_pr(sd.get("subtotals", []))),
-        "data_labels": {"seriesName":"0","categoryName":"0","value":"1"},
-        "data_labels_pos": "outEnd",
-        "legend": {"pos":"t","align":"ctr","overlay":"0"},
-    },
-    "histogram": {
-        "layout_id": "clusteredColumn",
-        "style":     "histogram",
-        "axes":      lambda sd: _two_axes("0"),
-        "layout_pr": lambda sd: (lambda i: _binning_layout_pr("r")),
-        "data_labels": None,
-        "legend": None,
-    },
-    "boxWhisker": {
-        "layout_id": "boxWhisker",
-        "style":     "boxwhisker",
-        "axes":      lambda sd: _two_axes("1"),
-        "layout_pr": lambda sd: (lambda i: _boxwhisker_layout_pr()),
-        "data_labels": {"seriesName":"0","categoryName":"0","value":"0"},
-        "legend": None,
-    },
-    "pareto": {
-        "style": "histogram",          # shares histogram's style (verified md5)
-        "build": lambda *a, **k: build_pareto_part_xml(*a, **k),
-    },
-}
 
 _ASSETS = Path(__file__).parent / "chartex_assets"
 
@@ -257,6 +216,88 @@ def build_pareto_part_xml(workbook_rid, categories, series_list, title=None):
 
     return to_xml_string(root)
 
+def build_hierarchical_part_xml(workbook_rid, categories, series_list, title=None, *,
+                                layout_id, data_labels_pos, parent_label_layout, legend):
+    series = series_list[0]
+    records = series["points"]
+    series_name = series.get("name", "Size")
+    n = len(records)
+    depth = len(records[0]["path"])
+    last_label_col = chr(ord("A") + depth - 1)
+    size_col       = chr(ord("A") + depth)
+
+    root = etree.Element(cxqn("chartSpace"),
+                         nsmap={"cx": CHARTEX_NS, "r": NSMAP["r"], "a": NSMAP["a"]})
+    chart_data = make_sub_element(root, cxqn("chartData"))
+    ext = make_sub_element(chart_data, cxqn("externalData"))
+    ext.set(qn("r", "id"), workbook_rid)
+    ext.set(cxqn("autoUpdate"), "0")
+
+    data = make_sub_element(chart_data, cxqn("data"), attrib={"id": "0"})
+    str_dim = make_sub_element(data, cxqn("strDim"), attrib={"type": "cat"})
+    make_sub_element(str_dim, cxqn("f"), text=f"Sheet1!$A$2:${last_label_col}${n+1}")
+    for j in range(depth):
+        lvl = make_sub_element(str_dim, cxqn("lvl"), attrib={"ptCount": str(n)})
+        for i, rec in enumerate(records):
+            label = rec["path"][depth - 1 - j]
+            make_sub_element(lvl, cxqn("pt"), text=str(label), attrib={"idx": str(i)})
+
+    num_dim = make_sub_element(data, cxqn("numDim"), attrib={"type": "size"})
+    make_sub_element(num_dim, cxqn("f"), text=f"Sheet1!${size_col}$2:${size_col}${n+1}")
+    num_lvl = make_sub_element(num_dim, cxqn("lvl"),
+                               attrib={"ptCount": str(n), "formatCode": "General"})
+    for i, rec in enumerate(records):
+        make_sub_element(num_lvl, cxqn("pt"), text=str(rec["value"]), attrib={"idx": str(i)})
+
+    chart = make_sub_element(root, cxqn("chart"))
+    title_el = make_sub_element(chart, cxqn("title"), attrib={"pos": "t", "align": "ctr", "overlay": "0"})
+    if title:
+        tx = make_sub_element(title_el, cxqn("tx"))
+        rich = make_sub_element(tx, cxqn("rich"))
+        make_sub_element(rich, qn("a", "bodyPr"))
+        make_sub_element(rich, qn("a", "lstStyle"))
+        rich.append(make_paragraph([make_run(str(title))]))
+
+    plot_area = make_sub_element(chart, cxqn("plotArea"))
+    region = make_sub_element(plot_area, cxqn("plotAreaRegion"))
+    ser = make_sub_element(region, cxqn("series"),
+                           attrib={"layoutId": layout_id, "uniqueId": _series_guid(0)})
+    stx = make_sub_element(ser, cxqn("tx"))
+    stxd = make_sub_element(stx, cxqn("txData"))
+    make_sub_element(stxd, cxqn("f"), text=f"Sheet1!${size_col}$1")
+    make_sub_element(stxd, cxqn("v"), text=series_name)
+    dl = make_sub_element(ser, cxqn("dataLabels"), attrib={"pos": data_labels_pos})
+    make_sub_element(dl, cxqn("visibility"),
+                     attrib={"seriesName": "0", "categoryName": "1", "value": "0"})
+    make_sub_element(ser, cxqn("dataId"), attrib={"val": "0"})
+    if parent_label_layout is not None:
+        lp = make_sub_element(ser, cxqn("layoutPr"))
+        make_sub_element(lp, cxqn("parentLabelLayout"), attrib={"val": parent_label_layout})
+    if legend is not None:
+        make_sub_element(chart, cxqn("legend"), attrib=legend)
+
+    return to_xml_string(root)
+
+
+def build_treemap_part_xml(workbook_rid, categories, series_list, title=None):
+    return build_hierarchical_part_xml(
+        workbook_rid, categories, series_list, title=title,
+        layout_id="treemap",
+        data_labels_pos="inEnd",
+        parent_label_layout="overlapping",
+        legend={"pos": "t", "align": "ctr", "overlay": "0"},
+    )
+
+
+def build_sunburst_part_xml(workbook_rid, categories, series_list, title=None):
+    return build_hierarchical_part_xml(
+        workbook_rid, categories, series_list, title=title,
+        layout_id="sunburst",
+        data_labels_pos="ctr",
+        parent_label_layout=None,    # sunburst has no layoutPr
+        legend=None,                 # sunburst has no legend
+    )
+
 def emit_chartex(shape_data, slide_state, relationships, content_types):
     """Emit a p:graphicFrame referencing a data-driven chartEx part"""
     spec = CHARTEX_TYPES[shape_data["type"]]
@@ -274,8 +315,11 @@ def emit_chartex(shape_data, slide_state, relationships, content_types):
     series_list = shape_data["series"]
     title       = shape_data.get("title")
 
-    # --- workbook (shared, type-agnostic) ---
-    slide_state.chart_parts[workbook_path] = build_chart_workbook_bytes(categories, series_list)
+    # --- workbook: special case for treemaps
+    if "workbook" in spec:
+        slide_state.chart_parts[workbook_path] = spec["workbook"](categories, series_list)
+    else:
+        slide_state.chart_parts[workbook_path] = build_chart_workbook_bytes(categories, series_list)
     content_types.add_override(workbook_path, ContentTypeRegistry.SPREADSHEET)
 
     workbook_rid = relationships.add(
@@ -361,6 +405,57 @@ def emit_chartex(shape_data, slide_state, relationships, content_types):
     chart_ref.set(qn("r", "id"), rid)
     return gf
 
+CHARTEX_TYPES = {
+    "funnel": {
+        "layout_id": "funnel",
+        "style":     "funnel",
+        "axes":      lambda sd: None,            # None → builder's default single catScaling axis
+        "layout_pr": lambda sd: (lambda i: None),            # funnel series has no layoutPr
+        "data_labels": {"seriesName":"0","categoryName":"0","value":"1"},
+        "legend": None,
+        
+    },
+    "waterfall": {
+        "layout_id": "waterfall",
+        "style":     "waterfall",
+        "axes":      lambda sd: _two_axes("0.5"),
+        "layout_pr": lambda sd: (lambda i: _waterfall_layout_pr(sd.get("subtotals", []))),
+        "data_labels": {"seriesName":"0","categoryName":"0","value":"1"},
+        "data_labels_pos": "outEnd",
+        "legend": {"pos":"t","align":"ctr","overlay":"0"},
+    },
+    "histogram": {
+        "layout_id": "clusteredColumn",
+        "style":     "histogram",
+        "axes":      lambda sd: _two_axes("0"),
+        "layout_pr": lambda sd: (lambda i: _binning_layout_pr("r")),
+        "data_labels": None,
+        "legend": None,
+    },
+    "boxWhisker": {
+        "layout_id": "boxWhisker",
+        "style":     "boxwhisker",
+        "axes":      lambda sd: _two_axes("1"),
+        "layout_pr": lambda sd: (lambda i: _boxwhisker_layout_pr()),
+        "data_labels": {"seriesName":"0","categoryName":"0","value":"0"},
+        "legend": None,
+    },
+    "pareto": {
+        "style": "histogram",          # shares histogram's style (verified md5)
+        "build": build_pareto_part_xml,
+    },
+    "treemap": {
+        "style": "treemap",
+        "build": build_treemap_part_xml,
+        "workbook": build_treemap_workbook_bytes,
+    },
+    "sunburst": {
+        "style": "sunburst",
+        "build": build_sunburst_part_xml,
+        "workbook": build_treemap_workbook_bytes,   # same hierarchical workbook
+    },
+}
+
 if __name__ == "__main__":
     import sys
 
@@ -413,6 +508,24 @@ if __name__ == "__main__":
             "rId1", cats, series_list,
             title="This is my pareto",
         ))
+
+    elif len(sys.argv) > 1 and sys.argv[1] == "treemap":
+        stems_for = ["Stem 1"]*3 + ["Stem 2"]*4 + ["Stem 3"]*2 + ["Stem 4"]*2 + ["Stem 5"]*2 + ["Stem 6"]*3
+        branches_for = ["Branch 1"]*7 + ["Branch 2"]*4 + ["Branch 3"]*5
+        sizes = [22,12,18,87,88,17,9,25,23,24,89,16,19,86,10,11]
+        records = [{"path": [branches_for[i], stems_for[i], f"Leaf {i+1}"], "value": sizes[i]}
+                   for i in range(16)]
+        series_list = [{"name": "Series1", "points": records}]
+        print(build_treemap_part_xml("rId1", [], series_list, title="This is my treemap"))
+    
+    elif len(sys.argv) > 1 and sys.argv[1] == "sunburst":
+        stems_for = ["Stem 1"]*3 + ["Stem 2"]*4 + ["Stem 3"]*2 + ["Stem 4"]*2 + ["Stem 5"]*2 + ["Stem 6"]*3
+        branches_for = ["Branch 1"]*7 + ["Branch 2"]*4 + ["Branch 3"]*5
+        sizes = [22,12,18,87,88,17,9,25,23,24,89,16,19,86,10,11]
+        records = [{"path": [branches_for[i], stems_for[i], f"Leaf {i+1}"], "value": sizes[i]}
+                   for i in range(16)]
+        series_list = [{"name": "Series1", "points": records}]
+        print(build_sunburst_part_xml("rId1", [], series_list, title="This is my sunburst"))
 
     else:
         # funnel (regression anchor)

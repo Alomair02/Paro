@@ -399,11 +399,49 @@ class LayoutResolver:
         actual_box = self._box_for_node(node, box)
 
         chart_type = node.attrs["type"]
-        CLASSIC = {"bar", "column", "line", "pie", "area", "scatter", "combo"}
-        CHARTEX = {"funnel", "waterfall", "histogram", "boxWhisker"}
+        CLASSIC = {"bar", "column", "line", "pie", "area", "scatter", "combo", "radar"}
+        CHARTEX = {"funnel", "waterfall", "histogram", "boxWhisker", "treemap", "sunburst"}
         if chart_type not in CLASSIC | CHARTEX:
             raise ValueError(f"Unsupported chart type: {chart_type}")
         
+        if chart_type in ("treemap", "sunburst"):
+            records = []
+            def walk(nd, ancestry):
+                kids = [c for c in nd.children if c.kind == "node"]
+                label = nd.attrs["label"]
+                if not kids:                                   # leaf: has value, no child nodes
+                    records.append({
+                        "path": ancestry + [label],
+                        "value": self._chart_number(nd.attrs["value"]),
+                    })
+                else:
+                    for k in kids:
+                        walk(k, ancestry + [label])
+            for top in [c for c in node.children if c.kind == "node"]:
+                walk(top, [])
+            if not records:
+                raise ValueError(f"<chart type='{chart_type}'> requires nested <node> children")
+            depths = {len(r["path"]) for r in records}
+            if len(depths) != 1:
+                raise ValueError(f"{chart_type} requires uniform leaf depth; got {sorted(depths)}")
+
+            style = self.chart_style_registry.get(node.attrs.get("style"))
+            finish = self.chart_style_registry.get_finish(node.attrs.get("finish", style.get("finish")))
+            shape = {
+                "type": chart_type,
+                "name": node.attrs.get("title", "Chart"),
+                "chart_type": chart_type,
+                "title": node.attrs.get("title"),
+                "categories": [],
+                "series": [{"name": node.attrs.get("seriesName", "Size"), "points": records}],
+                "legend": node.attrs.get("legend"),
+                "style": style,
+                "finish": finish,
+                **actual_box.as_shape_geometry(),
+            }
+            self._append_shape(shape)
+            self._record_block("chart", actual_box, parent_kind, node.attrs, content=shape)
+            return
         # categories: a comma string in the <categories> child's text
         cat_node = next((c for c in node.children if c.kind == "categories"), None)
         categories = (

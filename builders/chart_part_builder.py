@@ -173,6 +173,7 @@ def build_chart_part_xml(workbook_rid: str, categories: list, series_list: list,
                     ln.append(make_solid_fill(tone))
                 else:
                     _apply_bar_finish(sp_pr, tone, finish)
+    
                 _str_ref(ser, "cat", cat_ref, categories)
                 _num_ref(ser, "val", f"Sheet1!${name_col}$2:${name_col}${n+1}", s["values"])
                 if element == "lineChart":
@@ -224,6 +225,11 @@ def build_chart_part_xml(workbook_rid: str, categories: list, series_list: list,
         _c(plot, "grouping", val="standard")
         _c(plot, "varyColors", val="0")
         needs_value_axis = True
+    elif chart_type == "radar":
+        plot = _c(plot_area, "radarChart")
+        _c(plot, "radarStyle", val="marker")
+        _c(plot, "varyColors", val="0")
+        needs_value_axis = True
     elif chart_type == "pie":
         plot = _c(plot_area, "pieChart")
         _c(plot, "varyColors", val="1")
@@ -270,6 +276,7 @@ def build_chart_part_xml(workbook_rid: str, categories: list, series_list: list,
             if style.get("gridlines") == "major" and pos == "l":
                 _c(ax, "majorGridlines")
             _c(ax, "crossAx", val=cross)
+    
     else:   
         for idx, series in enumerate(series_list):
             ser = _c(plot, "ser")
@@ -280,7 +287,7 @@ def build_chart_part_xml(workbook_rid: str, categories: list, series_list: list,
             if chart_type != "pie":
                 sp_pr = _c(ser, "spPr")
                 tone = series.get("tone") or palette[idx % len(palette)]
-                if chart_type == "line":
+                if chart_type in ("line", "radar"):
                     ln = etree.SubElement(sp_pr, qn("a", "ln"))
                     ln.append(make_solid_fill(tone))
                 else:
@@ -312,7 +319,9 @@ def build_chart_part_xml(workbook_rid: str, categories: list, series_list: list,
                             "alpha": shadow["alpha"],
                         }))
 
-
+            if chart_type == "radar":
+                marker = _c(ser, "marker")
+                _c(marker, "symbol", val="none")
             _str_ref(ser, "cat", cat_ref, categories)
             _num_ref(ser, "val", f"Sheet1!${name_col}$2:${name_col}${n+1}", series["values"])
             if chart_type == "line":
@@ -331,7 +340,7 @@ def build_chart_part_xml(workbook_rid: str, categories: list, series_list: list,
         _c(cat_ax, "delete", val="0"); _c(cat_ax, "axPos", val="b")
         _c(cat_ax, "crossAx", val=val_ax_id)
         val_ax = _c(plot_area, "valAx")
-        if style.get("gridlines") == "major":
+        if style.get("gridlines") == "major" or chart_type == "radar":
             _c(val_ax, "majorGridlines")
         _c(val_ax, "axId", val=val_ax_id)
         sc2 = _c(val_ax, "scaling"); _c(sc2, "orientation", val="minMax")

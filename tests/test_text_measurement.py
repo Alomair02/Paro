@@ -6,7 +6,7 @@ from pptx import Presentation as PptxPresentation
 
 from builders.common import REFERENCE
 from transpiler import DSLParser, LayoutRegistry, LayoutResolver, ThemeRegistry, Validator, transpile_deck
-from transpiler.text_metrics import TextMeasurer
+from transpiler.text_metrics import TextMeasurer, resolve_font
 from utils.converter import UnitConverter
 
 
@@ -38,6 +38,29 @@ class TextMetricsTests(unittest.TestCase):
 
         self.assertTrue(result.approximation_used)
         self.assertEqual(result.font_family_used, "Liberation Sans")
+      
+    def test_aptos_resolves_to_exact_weight_and_subfamily(self):
+    # Regression: substring matching grabbed 'Aptos-Black.ttf' for a plain
+    # 'Aptos' request. Assert the EXACT file per family/weight/italic — a
+    # correct approximation_used flag did NOT catch this (it was False while
+    # pointing at Black).
+      cases = [
+          ("Aptos",         False, False, "Aptos.ttf"),
+          ("Aptos",         True,  False, "Aptos-Bold.ttf"),
+          ("Aptos",         False, True,  "Aptos-Italic.ttf"),
+          ("Aptos",         True,  True,  "Aptos-Bold-Italic.ttf"),
+          ("Aptos Display", False, False, "Aptos-Display.ttf"),
+          ("Aptos Display", True,  False, "Aptos-Display-Bold.ttf"),
+      ]
+      for family, bold, italic, expected in cases:
+          with self.subTest(family=family, bold=bold, italic=italic):
+              r = resolve_font(family, bold=bold, italic=italic)
+              self.assertIsNotNone(r.path, f"{family} did not resolve")
+              self.assertEqual(r.path.name, expected)
+              self.assertFalse(r.approximation_used)
+
+      # The specific regression, named explicitly.
+      self.assertNotEqual(resolve_font("Aptos").path.name, "Aptos-Black.ttf")
 
 
 class TextOverflowValidatorTests(unittest.TestCase):

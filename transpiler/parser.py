@@ -121,6 +121,7 @@ ALLOWED_ATTRS = {
     "categories": set(),
     "series": {"name", "tone", "type","axis"},
     "point": {"cat", "value", "x", "y", "subtotal"},
+    "node": {"label", "value"},
 }
 
 REQUIRED_ATTRS = {
@@ -176,9 +177,10 @@ ALLOWED_CHILDREN = {
     "row": {"cell"},
     "cell": {"p"},
     "timeline": {"group", "task", "milestone"},
-    "chart": {"categories", "series"},
+    "chart": {"categories", "series", "node"},
     "series": {"point"},
     "group": {"task"},
+    "node": {"node"},
 }
 
 

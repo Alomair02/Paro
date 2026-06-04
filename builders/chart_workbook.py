@@ -45,3 +45,17 @@ def build_chart_workbook_bytes(categories, series_list, chart_type="column") -> 
     buffer = io.BytesIO()
     wb.save(buffer)
     return buffer.getvalue()
+
+def build_treemap_workbook_bytes(categories, series_list):
+    series = series_list[0]
+    records = series["points"]                 # [{"path": [outer..inner], "value": n}, ...]
+    depth = len(records[0]["path"])
+    wb = Workbook(); ws = wb.active; ws.title = "Sheet1"
+    size_col = depth + 1                        # label cols A..(depth), then size col
+    ws.cell(row=1, column=size_col, value=series.get("name", "Size"))
+    for i, rec in enumerate(records):
+        r = i + 2
+        for k, label in enumerate(rec["path"]):   # outermost-first: path[0] -> col A (k=0 -> col 1)
+            ws.cell(row=r, column=k + 1, value=label)
+        ws.cell(row=r, column=size_col, value=rec["value"])
+    buf = io.BytesIO(); wb.save(buf); return buf.getvalue()
