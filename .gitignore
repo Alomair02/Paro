@@ -7,3 +7,5 @@ __pycache__/
 # Compiled bytecode files
 *.py[cod]
 *$py.class
+
+.venv/
