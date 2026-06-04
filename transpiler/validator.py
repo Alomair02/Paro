@@ -9,7 +9,7 @@ from typing import Any
 from transpiler.ast import Box
 from transpiler.registries import LayoutRegistry
 from transpiler.resolver import ResolvedDeck
-from transpiler.text_metrics import TextMeasurer
+from transpiler.text_metrics import is_supported_font, SUPPORTED_FONTS, TextMeasurer
 from utils.converter import UnitConverter
 
 
@@ -123,6 +123,8 @@ class Validator:
 
             if self.measure_text:
                 for block in slide.blocks:
+                    self._validate_font_support(deck, slide.slide_data["index"], block, issues)
+                if self.measure_text:
                     self._validate_text_fit(deck, slide.slide_data["index"], block, issues)
 
         return issues
@@ -297,6 +299,38 @@ class Validator:
             f"height +{initial['overflow_h_emu']} EMU at {initial['font_size_pt']:.2f}pt"
         )
         issues.append(ValidationIssue("warning", "text_overflow", message, details))
+    
+    def _validate_font_support(self, deck, slide_index, block, issues):
+        if not self._is_text_block(block):
+            return
+        paragraphs = self._paragraphs_from_content(block.content, ensure=False)
+        seen = set()
+        for paragraph in paragraphs:
+            role = (
+                paragraph.get("role")
+                or (block.content or {}).get("role")
+                or block.attrs.get("role")
+                or "body"
+            )
+            font_family = self._paragraph_font_family(deck, paragraph, role)
+            key = font_family.strip().lower() if font_family else ""
+            if not font_family or key in seen:
+                continue
+            seen.add(key)
+            if not is_supported_font(font_family):
+                issues.append(ValidationIssue(
+                    "warning",
+                    "font_unsupported",
+                    f"Font '{font_family}' on slide {slide_index} is not in Paro's "
+                    f"supported set; it displays correctly here but may substitute on "
+                    f"machines without it. Supported: {', '.join(sorted(SUPPORTED_FONTS))}.",
+                    {
+                        "slide_index": slide_index,
+                        "block_kind": block.kind,
+                        "font_family": font_family,
+                        "supported_fonts": sorted(SUPPORTED_FONTS),
+                    },
+                ))
 
     def _is_text_block(self, block) -> bool:
         content = block.content

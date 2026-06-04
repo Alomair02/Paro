@@ -9,3 +9,5 @@ __pycache__/
 *$py.class
 
 .venv/
+
+transpiler/__pycache__

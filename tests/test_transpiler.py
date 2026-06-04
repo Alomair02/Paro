@@ -20,6 +20,7 @@ from transpiler import (
     Validator,
     transpile_deck,
 )
+from transpiler.registries import ChartStyleRegistry
 from transpiler.validator import TranspileValidationError
 from tests.pptx_test_utils import parse_xml
 from utils.converter import UnitConverter
@@ -82,6 +83,31 @@ class TranspilerRegistryTests(unittest.TestCase):
         self.assertEqual(theme["typeScale"]["body"]["weight"], "bold")
         for role in ("title", "heading", "subheading", "body", "bodySmall", "caption"):
             self.assertIn("size", theme["typeScale"][role])
+    
+    def test_registries_merge_custom_over_defaults_keeping_builtins(self):
+        # Uniform rule: passing custom data ADDS to / overrides built-ins;
+        # built-ins are never lost. Same semantics across layout/chart/timeline.
+
+        # LayoutRegistry: built-in survives, custom is added
+        lr = LayoutRegistry({"my_layout": {"placeholders": []}})
+        self.assertIsNotNone(lr.get("my_layout"))           # custom present
+        self.assertIsNotNone(lr.get("titleBody"))           # a built-in still present
+                                                            # (use any real default name)
+
+        # ChartStyleRegistry: built-in survives, custom added
+        cr = ChartStyleRegistry(styles={"my_style": {"palette": ["accent1"]}})
+        self.assertIsNotNone(cr.get("my_style"))
+        self.assertIsNotNone(cr.get("clean"))               # DEFAULT_STYLE survives
+
+        # TimelineStyleRegistry: built-in survives, custom added
+        tr = TimelineStyleRegistry(styles={"my_tl": {"mechanism": "bars-in-columns"}})
+        self.assertIsNotNone(tr.get("my_tl"))
+        self.assertIsNotNone(tr.get("gantt-grid"))          # DEFAULT_STYLE survives
+
+    def test_custom_entry_overrides_builtin_by_name(self):
+        # Reusing a built-in name overrides it (the deliberate-override path)
+        cr = ChartStyleRegistry(styles={"clean": {"palette": ["accent6"]}})
+        self.assertEqual(cr.get("clean")["palette"], ["accent6"])
 
     def test_timeline_style_registry_resolves_initial_style_bundles(self):
         registry = TimelineStyleRegistry()

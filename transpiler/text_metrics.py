@@ -18,6 +18,11 @@ FONT_DIRS = (
     Path("/usr/share/fonts"),
     Path("/usr/local/share/fonts"),
     Path.home() / ".local/share/fonts",
+
+    # macOS
+    Path("/System/Library/Fonts"),
+    Path("/Library/Fonts"),
+    Path.home() / "Library/Fonts",
 )
 
 FAMILY_ALIASES = {
@@ -34,6 +39,21 @@ _WEIGHT_TOKENS = {
 }
 _STYLE_TOKENS = {"italic", "oblique"}
 _DEFAULT_WEIGHT = "regular"
+
+# transpiler/text_metrics.py, near FONT_DIRS / FAMILY_ALIASES
+# The fonts Paro treats as "safe to reference": present on the measurement
+# environment AND expected on recipient machines (MS-standard / Office set).
+# A referenced font outside this set is valid but will substitute on machines
+# that lack it — the validator warns, it does not error.
+SUPPORTED_FONTS = frozenset({
+    "Aptos", "Aptos Display",            # Paro default theme fonts
+    "Calibri", "Cambria",                # MS Office classic defaults
+    "Arial", "Times New Roman", "Georgia", "Verdana", "Tahoma", "Trebuchet MS",
+    "Courier New",                       # monospace baseline
+})
+
+def is_supported_font(font_family: str) -> bool:
+    return _normalize(font_family) in {_normalize(f) for f in SUPPORTED_FONTS}
 
 @dataclass(frozen=True)
 class TextMeasurement:

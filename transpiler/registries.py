@@ -251,7 +251,10 @@ class LayoutRegistry:
     """Resolve layout names through the engine's existing layout table."""
 
     def __init__(self, layouts: dict | None = None):
-        self._layouts = layouts or LAYOUT_DEFINITIONS
+        self._layouts = deepcopy(LAYOUT_DEFINITIONS)
+        if layouts:
+            for name, layout in layouts.items():
+                self._layouts[name] = deepcopy(layout)
 
     def get(self, name: str) -> dict:
         try:

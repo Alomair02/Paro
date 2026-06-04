@@ -195,6 +195,26 @@ class TextMeasurementIntegrationTests(unittest.TestCase):
         warnings = [issue for issue in result.validation_issues if issue.code == "text_overflow"]
         self.assertEqual(len(presentation.slides), 2)
         self.assertEqual([warning.details["slide_index"] for warning in warnings], [2])
+      
+    def test_unsupported_theme_font_warns(self):
+      from transpiler.pipeline import _inline_theme_map
+      xml = ('<deck><theme name="brand" heading="Acme Sans" body="Acme Sans"/>'
+            '<slide layout="blank" flow="free">'
+            '<text x="0.5in" y="0.5in" w="6in" h="2in" role="body">Hi</text>'
+            '</slide></deck>')
+      ast = DSLParser().parse(xml)
+      deck = LayoutResolver(ThemeRegistry(_inline_theme_map(ast)), LayoutRegistry()).resolve(ast)
+      codes = [i.code for i in Validator().validate(deck) if i.code == "font_unsupported"]
+      self.assertGreaterEqual(len(codes), 1)
+
+    def test_supported_font_does_not_warn(self):
+        xml = ('<deck><slide layout="blank" flow="free">'
+              '<text x="0.5in" y="0.5in" w="6in" h="2in" role="body" font="Aptos">Hi</text>'
+              '</slide></deck>')
+        ast = DSLParser().parse(xml)
+        deck = LayoutResolver(ThemeRegistry(), LayoutRegistry()).resolve(ast)
+        codes = [i.code for i in Validator().validate(deck) if i.code == "font_unsupported"]
+        self.assertEqual(codes, [])
 
 
 if __name__ == "__main__":
