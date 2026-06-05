@@ -17,11 +17,12 @@ from builders.deck_builder import assemble_package
 from core.content_type_reg import ContentTypeRegistry
 from core.relationship_reg import RelationshipRegistry
 from transpiler.ast import DeckAst
-from transpiler.parser import DSLParser
+from transpiler.parser import DSLParser, DSLParseError
 from transpiler.registries import LayoutRegistry, ShapeLibrary, ThemeRegistry
 from transpiler.resolver import LayoutResolver, ResolvedDeck
 from transpiler.validator import ValidationIssue, Validator
-
+import re
+_HEX_RE = re.compile(r'^[0-9A-Fa-f]{6}$')
 
 @dataclass
 class TranspileResult:
@@ -84,7 +85,13 @@ def _inline_theme_map(ast: DeckAst) -> dict[str, dict[str, Any]]:
     attrs = ast.inline_theme.attrs
     for slot in REFERENCE["color_scheme_slots"]["order"]:
         if slot in attrs:
-            colors[slot] = attrs[slot].lstrip("#").upper()
+            raw = attrs[slot].lstrip("#").upper()
+            if not _HEX_RE.match(raw):
+                raise DSLParseError(
+                    f"theme {slot}='{attrs[slot]}' is not a 6-digit hex color "
+                    f"(e.g. '2563EB' or '#2563EB')"
+                )
+            colors[slot] = raw
     if "heading" in attrs:
         fonts["heading"] = attrs["heading"]
     if "body" in attrs:

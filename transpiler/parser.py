@@ -192,7 +192,8 @@ class DSLParser:
 
     def parse(self, xml_text: str) -> DeckAst:
         try:
-            root = etree.fromstring(xml_text.encode("utf-8"))
+            _parser = etree.XMLParser(remove_comments=True)
+            root = etree.fromstring(xml_text.encode("utf-8"), _parser)
         except etree.XMLSyntaxError as exc:
             raise DSLParseError(str(exc)) from exc
 

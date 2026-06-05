@@ -22,6 +22,7 @@ from transpiler import (
 )
 from transpiler.registries import ChartStyleRegistry
 from transpiler.validator import TranspileValidationError
+from transpiler.pipeline import _inline_theme_map
 from tests.pptx_test_utils import parse_xml
 from utils.converter import UnitConverter
 
@@ -1118,6 +1119,51 @@ class TranspilerIntegrationTests(unittest.TestCase):
             col += 1
         self.assertEqual(sorted(cache_values), sorted(wb_values))
 
+
+class EngineHardeningTests(unittest.TestCase):
+    """Regression guards for fixes surfaced by the agent-DSL probe."""
+
+    def test_xml_comments_do_not_crash_parser(self):  # #6
+        parse_resolve(
+            '<deck><!-- a note --><slide layout="blank" flow="stack">'
+            '<text role="body">x</text></slide></deck>'
+        )
+
+    def test_chart_category_value_mismatch_rejected(self):  # #8
+        with self.assertRaises(ValueError):
+            parse_resolve(
+                '<deck><slide layout="blank" flow="free">'
+                '<chart type="column" x="1in" y="1in" w="6in" h="4in">'
+                '<categories>A,B,C</categories>'
+                '<series name="s"><point cat="A" value="1"/></series>'
+                '</chart></slide></deck>'
+            )
+
+    def test_chart_matched_category_value_accepted(self):  # #8 must-not-false-positive
+        parse_resolve(
+            '<deck><slide layout="blank" flow="free">'
+            '<chart type="column" x="1in" y="1in" w="6in" h="4in">'
+            '<categories>A,B</categories>'
+            '<series name="s"><point cat="A" value="1"/><point cat="B" value="2"/></series>'
+            '</chart></slide></deck>'
+        )
+
+    def test_bad_theme_hex_rejected(self):  # #9
+        ast = DSLParser().parse(
+            '<deck><theme name="t" accent1="notacolor"/>'
+            '<slide layout="blank" flow="stack"><text role="body">x</text></slide></deck>'
+        )
+        with self.assertRaises(Exception):  # DSLParseError
+            _inline_theme_map(ast)
+
+    def test_valid_theme_hex_accepted(self):  # #9 must-not-false-positive
+        ast = DSLParser().parse(
+            '<deck><theme name="t" accent1="2563EB"/>'
+            '<slide layout="blank" flow="stack"><text role="body">x</text></slide></deck>'
+        )
+        self.assertEqual(_inline_theme_map(ast)['t']['colors']['accent1'], '2563EB')
+
+    
 
 if __name__ == "__main__":
     unittest.main()

@@ -470,6 +470,17 @@ class LayoutResolver:
                 values = [self._chart_number(p.attrs["value"]) for p in points]
                 if not categories and all("cat" in p.attrs for p in points):
                     categories = [p.attrs["cat"] for p in points]
+                
+                # --- #8: guard parallel cat/value arrays ---
+                # histogram has no categories (raw values, PP auto-bins) — exempt.
+                # treemap/sunburst returned earlier. scatter handled above.
+                if categories and chart_type != "histogram" and len(values) != len(categories):
+                    raise ValueError(
+                        f"<chart type='{chart_type}'> series '{s.attrs['name']}': "
+                        f"{len(categories)} categories but {len(values)} values "
+                        f"(each series must have one value per category)"
+                    )
+                
                 series.append({
                     "name": s.attrs["name"],
                     "tone": s.attrs.get("tone"),
