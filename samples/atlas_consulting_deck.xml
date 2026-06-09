@@ -1,0 +1,206 @@
+<deck theme="deloitte">
+
+  <!-- 1 · Cover -->
+  <slide layout="title">
+    <text placeholder="ctrTitle">Project Atlas</text>
+    <text placeholder="subTitle">
+      <p>Technology Cost Optimisation — Diagnostic Findings and Delivery Roadmap</p>
+      <p>Meridian Retail Group · Steering Committee · June 2026</p>
+    </text>
+    <stack dir="h" anchor="bottom" h="0.32in" gap="0">
+      <shape fill="dk2" text="CONFIDENTIAL — FOR INTERNAL DISCUSSION ONLY"/>
+    </stack>
+  </slide>
+
+  <!-- 2 · Executive summary -->
+  <slide layout="titleBody">
+    <text placeholder="title">Executive summary: a £33m run-rate saving is achievable by FY28</text>
+    <text placeholder="body" list="number">
+      <p>Meridian's technology spend has grown 2.3x faster than revenue since FY22, reaching £142m — 4.1% of revenue against a retail peer median of 2.9%.</p>
+      <p>Four structural drivers account for 78% of the gap: legacy ERP run costs, duplicated cloud estates, vendor sprawl, and manual service operations.</p>
+      <p>A three-wave programme can remove £33m of annual run-rate by FY28, with £9m landing in the first 12 months at low delivery risk.</p>
+      <p>The first wave is self-funding: contract renegotiations and cloud rightsizing require no capital investment and begin returning cash in Q2.</p>
+    </text>
+  </slide>
+
+  <!-- 3 · Key metrics cards -->
+  <slide layout="titleOnly" flow="stack" gap="0.3in">
+    <text placeholder="title">The diagnostic at a glance</text>
+    <grid cols="4" gap="0.25in" h="3.4in">
+      <stack fill="lt2" radius="6pt" pad="0.22in" gap="0.1in">
+        <text role="title" color="accent2">£142m</text>
+        <text role="heading">FY25 technology spend</text>
+        <text role="caption">4.1% of revenue vs 2.9% peer median</text>
+      </stack>
+      <stack fill="lt2" radius="6pt" pad="0.22in" gap="0.1in">
+        <text role="title" color="accent2">£33m</text>
+        <text role="heading">Addressable run-rate</text>
+        <text role="caption">23% of baseline, validated bottom-up across 11 cost pools</text>
+      </stack>
+      <stack fill="lt2" radius="6pt" pad="0.22in" gap="0.1in">
+        <text role="title" color="accent2">214</text>
+        <text role="heading">Active vendors</text>
+        <text role="caption">Top 20 hold 71% of spend; the tail holds 9% with 64% of contracts</text>
+      </stack>
+      <stack fill="lt2" radius="6pt" pad="0.22in" gap="0.1in">
+        <text role="title" color="accent2">18 mo</text>
+        <text role="heading">Payback horizon</text>
+        <text role="caption">Wave 1 self-funds the programme from Q2 FY27</text>
+      </stack>
+    </grid>
+    <text role="caption">Source: Meridian GL extract FY22–FY25, contract register, Atlas diagnostic interviews (n = 34). Figures rounded.</text>
+  </slide>
+
+  <!-- 4 · Cost baseline by business unit (column, zero baseline + labels) -->
+  <slide layout="titleOnly" flow="stack" gap="0.25in">
+    <text placeholder="title">Run costs are concentrated — and growing fastest where margins are thinnest</text>
+    <chart type="column" title="Technology run cost by business unit (£m)" h="4.6in">
+      <categories>Stores, E-commerce, Supply Chain, Corporate, Financial Services</categories>
+      <series name="FY24"><point value="38.4"/><point value="29.1"/><point value="22.6"/><point value="18.2"/><point value="12.9"/></series>
+      <series name="FY25"><point value="41.2"/><point value="36.8"/><point value="24.1"/><point value="21.7"/><point value="14.8"/></series>
+    </chart>
+    <text role="caption">E-commerce run cost grew 26% year-on-year against 11% channel revenue growth.</text>
+  </slide>
+
+  <!-- 5 · Spend mix (pie + commentary) -->
+  <slide layout="titleOnly" flow="stack" gap="0.25in">
+    <text placeholder="title">Where the £142m goes</text>
+    <grid cols="2" gap="0.4in" h="4.8in">
+      <chart type="pie" title="FY25 spend mix" dataLabels="percent">
+        <categories>Run &amp; maintain, Cloud &amp; hosting, Vendor licences, Change portfolio, Service desk</categories>
+        <series name="FY25"><point value="48"/><point value="27"/><point value="31"/><point value="24"/><point value="12"/></series>
+      </chart>
+      <stack gap="0.18in">
+        <text role="heading">Two-thirds of spend keeps the lights on</text>
+        <text role="body">Run-and-maintain plus licences consume 56% of the budget before any change is delivered. Peer retailers hold this below 45%.</text>
+        <text role="body">The change portfolio itself is healthy in size but fragmented: 61 initiatives across 9 steering groups, with no single value gate.</text>
+        <text role="bodySmall" color="dk2">Implication: the saving is not "spend less on change" — it is "stop paying premium prices to stand still."</text>
+      </stack>
+    </grid>
+  </slide>
+
+  <!-- 6 · Run-rate trend (combo: bars + secondary-axis line) -->
+  <slide layout="titleOnly" flow="stack" gap="0.25in">
+    <text placeholder="title">Spend is rising while delivered change per pound falls</text>
+    <chart type="combo" title="Quarterly spend vs delivery efficiency" h="4.6in">
+      <categories>Q1 FY25, Q2 FY25, Q3 FY25, Q4 FY25, Q1 FY26</categories>
+      <series name="Technology spend (£m)" type="column" axis="primary">
+        <point value="33.1"/><point value="34.6"/><point value="35.9"/><point value="38.4"/><point value="39.7"/>
+      </series>
+      <series name="Features shipped per £1m" type="line" axis="secondary">
+        <point value="6.8"/><point value="6.1"/><point value="5.7"/><point value="5.2"/><point value="4.9"/>
+      </series>
+    </chart>
+    <text role="caption">Delivery efficiency normalised to FY24 feature-point baseline. Spend bars on the left axis; efficiency line on the right.</text>
+  </slide>
+
+  <!-- 7 · Savings bridge (waterfall chartEx) -->
+  <slide layout="titleOnly" flow="stack" gap="0.25in">
+    <text placeholder="title">The bridge from £142m to a £109m run-rate</text>
+    <chart type="waterfall" title="FY25 baseline to FY28 target (£m)" h="4.8in">
+      <series name="Bridge">
+        <point cat="FY25 baseline" value="142"/>
+        <point cat="Vendor renegotiation" value="-12"/>
+        <point cat="Cloud rightsizing" value="-9"/>
+        <point cat="ERP simplification" value="-7"/>
+        <point cat="Service automation" value="-5"/>
+        <point cat="FY28 target" value="109" subtotal="true"/>
+      </series>
+    </chart>
+  </slide>
+
+  <!-- 8 · Cost drivers (pareto chartEx) -->
+  <slide layout="titleOnly" flow="stack" gap="0.25in">
+    <text placeholder="title">A classic long tail: four driver categories explain most of the addressable cost</text>
+    <chart type="pareto" title="Addressable saving by driver (£m)" h="4.8in">
+      <series name="Drivers">
+        <point cat="Legacy ERP estate" value="9.4"/>
+        <point cat="Duplicate cloud workloads" value="7.8"/>
+        <point cat="Shelfware licences" value="6.1"/>
+        <point cat="Manual service ops" value="4.6"/>
+        <point cat="Data egress charges" value="2.2"/>
+        <point cat="Shadow IT" value="1.7"/>
+        <point cat="Print &amp; devices" value="1.2"/>
+      </series>
+    </chart>
+  </slide>
+
+  <!-- 9 · Vendor tiering table -->
+  <slide layout="titleOnly" flow="stack" gap="0.25in">
+    <text placeholder="title">Vendor strategy: five contracts carry the first wave</text>
+    <table cols="5" header="true" colWidths="26%,18%,18%,24%,14%" h="4.2in">
+      <row><cell>Vendor</cell><cell>Category</cell><cell align="r">FY25 spend</cell><cell>Wave-1 action</cell><cell align="r">Saving</cell></row>
+      <row><cell>Northgate Systems</cell><cell>ERP support</cell><cell align="r">£18.2m</cell><cell>Renegotiate at renewal, tiered SLAs</cell><cell align="r">£4.1m</cell></row>
+      <row><cell>CloudPort</cell><cell>IaaS</cell><cell align="r">£14.6m</cell><cell>Committed-use discount + rightsizing</cell><cell align="r">£3.3m</cell></row>
+      <row><cell>Veritura</cell><cell>Licences</cell><cell align="r">£9.8m</cell><cell>True-down 2,400 unused seats</cell><cell align="r">£2.2m</cell></row>
+      <row><cell>HelixServe</cell><cell>Service desk</cell><cell align="r">£7.1m</cell><cell>Automate L1, outcome pricing</cell><cell align="r">£1.6m</cell></row>
+      <row><cell>Arcfield Data</cell><cell>Analytics</cell><cell align="r">£5.4m</cell><cell>Consolidate to group contract</cell><cell align="r">£0.9m</cell></row>
+      <row><cell bold="true">Wave-1 total</cell><cell></cell><cell align="r" bold="true">£55.1m</cell><cell></cell><cell align="r" bold="true">£12.1m</cell></row>
+    </table>
+    <text role="caption">Savings are annualised run-rate at steady state; one-off renegotiation costs are absorbed in existing budgets.</text>
+  </slide>
+
+  <!-- 10 · Roadmap (timeline swimlane) -->
+  <slide layout="titleOnly" flow="stack" gap="0.25in">
+    <text placeholder="title">Delivery roadmap: three waves over twelve months</text>
+    <timeline style="swimlane" periods="12" unit="month" h="4.6in">
+      <group label="Commercial">
+        <task label="Vendor renegotiation" start="1" span="5" tone="accent2"/>
+        <task label="Licence true-down" start="3" span="4" tone="accent2"/>
+      </group>
+      <group label="Infrastructure">
+        <task label="Cloud rightsizing" start="2" span="5" tone="accent1"/>
+        <task label="Workload consolidation" start="6" span="5" tone="accent1"/>
+      </group>
+      <group label="Operations">
+        <task label="L1 automation build" start="4" span="5" tone="accent5"/>
+        <task label="ERP simplification design" start="7" span="6" tone="accent5"/>
+      </group>
+      <milestone label="Kickoff" at="1"/>
+      <milestone label="Exec checkpoint" at="5"/>
+      <milestone label="Contracts signed" at="8"/>
+      <milestone label="Wave-1 savings banked" at="12"/>
+    </timeline>
+  </slide>
+
+  <!-- 11 · Risks and mitigations (twoContent) -->
+  <slide layout="twoContent">
+    <text placeholder="title">What could knock the programme off course</text>
+    <text placeholder="body" idx="1" list="bullet">
+      <p bold="true">Key risks</p>
+      <p>Northgate renewal slips past Q3, deferring the largest single saving</p>
+      <p>Cloud rightsizing degrades peak-trading performance</p>
+      <p>Service-desk automation triggers union consultation delays</p>
+      <p>Change fatigue: 61 in-flight initiatives compete for the same engineers</p>
+    </text>
+    <text placeholder="body" idx="2" list="bullet">
+      <p bold="true">Mitigations</p>
+      <p>Begin renewal negotiation in month 1 with a credible exit alternative</p>
+      <p>Freeze rightsizing changes across the November–January trading window</p>
+      <p>Early works-council engagement; redeploy, don't release, L1 staff</p>
+      <p>Value gate at the exec checkpoint: stop or merge the bottom-quartile initiatives</p>
+    </text>
+  </slide>
+
+  <!-- 12 · Recommendations -->
+  <slide layout="titleBody">
+    <text placeholder="title">Decisions requested from this committee</text>
+    <text placeholder="body" list="number">
+      <p>Approve Wave 1 (commercial + cloud) for immediate mobilisation — £12.1m annualised, no capital required.</p>
+      <p>Mandate the value gate: every in-flight initiative re-baselined against the Atlas business case by end of Q1.</p>
+      <p>Appoint a single accountable owner for the vendor estate with delegated negotiation authority.</p>
+      <p>Commit to the FY28 target of £109m in the FY27 budget letter, so savings are banked rather than reabsorbed.</p>
+    </text>
+  </slide>
+
+  <!-- 13 · Close -->
+  <slide layout="blank" flow="stack" pad="1in" gap="0.3in">
+    <text role="title" align="ctr">Thank you</text>
+    <text role="subheading" align="ctr">Project Atlas working team</text>
+    <text role="body" align="ctr">atlas-pmo@meridianretail.example · Room 4.12, Group Technology</text>
+    <stack dir="h" anchor="bottom" h="0.32in" gap="0">
+      <shape fill="dk2" text="CONFIDENTIAL — FOR INTERNAL DISCUSSION ONLY"/>
+    </stack>
+  </slide>
+
+</deck>

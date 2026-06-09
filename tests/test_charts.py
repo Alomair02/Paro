@@ -180,3 +180,23 @@ class ChartDefaultsTests(unittest.TestCase):
             by_pos["r"].find("c:scaling/c:min", self.ns),
             "secondary axis is line-only -> auto",
         )
+
+    def test_chart_title_emitted_first_with_auto_title_kept(self):
+        root = self._build("column", title="Run cost (£m)")
+        chart = root.find(".//c:chart", self.ns)
+        first = chart[0]
+        self.assertEqual(first.tag.split("}")[1], "title")
+        a_ns = {"a": "http://schemas.openxmlformats.org/drawingml/2006/main", **self.ns}
+        t = first.find("c:tx/c:rich/a:p/a:r/a:t", a_ns)
+        self.assertEqual(t.text, "Run cost (£m)")
+        self.assertEqual(
+            chart.find("c:autoTitleDeleted", self.ns).get("val"), "0"
+        )
+
+    def test_no_title_suppresses_powerpoint_auto_title(self):
+        root = self._build("column")
+        chart = root.find(".//c:chart", self.ns)
+        self.assertIsNone(chart.find("c:title", self.ns))
+        self.assertEqual(
+            chart.find("c:autoTitleDeleted", self.ns).get("val"), "1"
+        )

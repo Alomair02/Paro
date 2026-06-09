@@ -122,7 +122,23 @@ def _apply_bar_finish(sp_pr, tone, finish):
             "alpha": shadow["alpha"],
         }))
 
-def build_chart_part_xml(workbook_rid: str, categories: list, series_list: list, chart_type: str = "column", style: dict | None = None, finish: dict | None = None, stacked: str = "false", legend: str | None = None, data_labels: str | None = None) -> str:
+def _emit_title(chart, title: str | None):
+    """c:title as the first c:chart child; explicit autoTitleDeleted either way
+    (without it PowerPoint auto-titles single-series charts)."""
+    if title:
+        t = _c(chart, "title")
+        tx = _c(t, "tx")
+        rich = _c(tx, "rich")
+        etree.SubElement(rich, qn("a", "bodyPr"))
+        etree.SubElement(rich, qn("a", "lstStyle"))
+        p = etree.SubElement(rich, qn("a", "p"))
+        r = etree.SubElement(p, qn("a", "r"))
+        etree.SubElement(r, qn("a", "t")).text = title
+        _c(t, "overlay", val="0")
+    _c(chart, "autoTitleDeleted", val="0" if title else "1")
+
+
+def build_chart_part_xml(workbook_rid: str, categories: list, series_list: list, chart_type: str = "column", style: dict | None = None, finish: dict | None = None, stacked: str = "false", legend: str | None = None, data_labels: str | None = None, title: str | None = None) -> str:
     """
     series_list: [{"name": str, "values": [num], "tone": str|None}, ...]
     chart_type: column|bar|line|area|pie
@@ -152,6 +168,7 @@ def build_chart_part_xml(workbook_rid: str, categories: list, series_list: list,
 
     root = etree.Element(cqn("chartSpace"), nsmap=CHART_NSMAP)
     chart = _c(root, "chart")
+    _emit_title(chart, title)
     plot_area = _c(chart, "plotArea")
     _c(plot_area, "layout")
 
@@ -432,6 +449,7 @@ def emit_chart(shape_data, slide_state, relationships, content_types):
     stacked = shape_data.get("stacked", "false")
     legend = shape_data.get("legend")
     data_labels = shape_data.get("data_labels")
+    title = shape_data.get("title")
     chart_part_path = slide_state.next_chart_path()
     chart_index = chart_part_path.rsplit("chart", 1)[-1].split(".")[0]
     workbook_path = f"xl/embeddings/Microsoft_Excel_Worksheet{chart_index}.xlsx"
@@ -453,7 +471,8 @@ def emit_chart(shape_data, slide_state, relationships, content_types):
                                                                              finish=finish,
                                                                                stacked=stacked,
                                                                                legend=legend,
-                                                                               data_labels=data_labels)
+                                                                               data_labels=data_labels,
+                                                                               title=title)
     content_types.add_override(chart_part_path, ContentTypeRegistry.CHART)
 
     rid = relationships.add(
