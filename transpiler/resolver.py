@@ -143,7 +143,14 @@ class LayoutResolver:
 
         direction = node.attrs.get("dir", "v")
         gap = self._unit(node.attrs.get("gap", self.DEFAULT_GAP), inner.w if direction == "h" else inner.h)
-        slots = self._stack_slots(children, inner, direction, gap, node.attrs.get("align", "stretch"))
+        slots = self._stack_slots(
+            children,
+            inner,
+            direction,
+            gap,
+            node.attrs.get("align", "stretch"),
+            node.attrs.get("justify", "start"),
+        )
         for child, child_box in zip(children, slots):
             self._resolve_node(child, child_box, node.kind)
 
@@ -1159,7 +1166,7 @@ class LayoutResolver:
             return fonts.get("heading", "Liberation Sans")
         return fonts.get("body", "Liberation Sans")
 
-    def _stack_slots(self, children: list[Node], box: Box, direction: str, gap: int, align: str) -> list[Box]:
+    def _stack_slots(self, children: list[Node], box: Box, direction: str, gap: int, align: str, justify: str = "start") -> list[Box]:
         main_attr = "w" if direction == "h" else "h"
         cross_attr = "h" if direction == "h" else "w"
         main_len = box.w if direction == "h" else box.h
@@ -1168,13 +1175,33 @@ class LayoutResolver:
             self._unit(child.attrs[main_attr], main_len) if main_attr in child.attrs else None
             for child in children
         ]
-        remaining = main_len - gap * (len(children) - 1) - sum(size or 0 for size in explicit_main)
-        auto_count = sum(1 for size in explicit_main if size is None)
-        auto_main = max(0, remaining // auto_count) if auto_count else 0
-        slots: list[Box] = []
+        gaps_total = gap * (len(children) - 1)
+
+        if direction == "v":
+            main_sizes = self._vertical_stack_sizes(
+                children, explicit_main, cross_len, main_len - gaps_total
+            )
+        else:
+            remaining = main_len - gaps_total - sum(size or 0 for size in explicit_main)
+            auto_count = sum(1 for size in explicit_main if size is None)
+            auto_main = max(0, remaining // auto_count) if auto_count else 0
+            main_sizes = [
+                explicit if explicit is not None else auto_main
+                for explicit in explicit_main
+            ]
+
+        leftover = max(0, main_len - gaps_total - sum(main_sizes))
+        extra_gap = 0
         cursor = box.x if direction == "h" else box.y
-        for child, explicit in zip(children, explicit_main):
-            main_size = explicit if explicit is not None else auto_main
+        if justify == "ctr":
+            cursor += leftover // 2
+        elif justify == "end":
+            cursor += leftover
+        elif justify == "between" and len(children) > 1:
+            extra_gap = leftover // (len(children) - 1)
+
+        slots: list[Box] = []
+        for child, main_size in zip(children, main_sizes):
             cross_size = (
                 self._unit(child.attrs[cross_attr], cross_len)
                 if cross_attr in child.attrs and align != "stretch"
@@ -1189,8 +1216,97 @@ class LayoutResolver:
                 slots.append(Box(round(cursor), round(cross_pos), round(main_size), round(cross_size)))
             else:
                 slots.append(Box(round(cross_pos), round(cursor), round(cross_size), round(main_size)))
-            cursor += main_size + gap
+            cursor += main_size + gap + extra_gap
         return slots
+
+    # Kinds that flex to absorb leftover vertical stack space. Text and rules
+    # are content-sized; containers and media fill what remains.
+    STACK_FLEX_KINDS = frozenset(
+        {"stack", "grid", "free", "chart", "table", "timeline", "image", "shape", "use"}
+    )
+
+    # PowerPoint's default vertical text-box insets (tIns + bIns, 45720 each).
+    TEXT_BOX_VERTICAL_INSETS_EMU = 91440
+
+    def _vertical_stack_sizes(
+        self,
+        children: list[Node],
+        explicit_main: list[int | None],
+        width: int,
+        available: int,
+    ) -> list[int]:
+        """Content-aware vertical slotting. The old model split leftover space
+        EQUALLY across all auto children, so a one-line header got the same
+        slot as a paragraph or a hairline rule — and overflowed onto its
+        neighbour on dense slides. Text now takes its measured height, rules
+        take their stroke, and only container kinds flex."""
+        sized: list[tuple[str, int | None]] = []
+        for child, explicit in zip(children, explicit_main):
+            if explicit is not None:
+                sized.append(("fixed", explicit))
+            elif child.kind == "text":
+                sized.append(("intrinsic", self._intrinsic_text_height(child, width)))
+            elif child.kind == "line":
+                stroke = self._unit(child.attrs.get("width", "1pt"), width)
+                sized.append(("intrinsic", max(stroke, 1)))
+            else:
+                sized.append(("flex", None))
+
+        fixed_total = sum(size for _, size in sized if size is not None)
+        flex_count = sum(1 for kind, _ in sized if kind == "flex")
+        remaining = available - fixed_total
+        if flex_count:
+            flex_size = max(0, remaining // flex_count)
+        else:
+            flex_size = 0
+            if remaining < 0:
+                # No flexible child to squeeze: compress measured (not
+                # explicit) slots proportionally so siblings never overlap;
+                # the validator's text_overflow warning reports the squeeze.
+                intrinsic_total = sum(size for kind, size in sized if kind == "intrinsic")
+                if intrinsic_total > 0:
+                    factor = max(0.0, (intrinsic_total + remaining) / intrinsic_total)
+                    sized = [
+                        (kind, round(size * factor) if kind == "intrinsic" else size)
+                        for kind, size in sized
+                    ]
+        return [flex_size if kind == "flex" else size for kind, size in sized]
+
+    def _intrinsic_text_height(self, node: Node, width: int) -> int:
+        """Measured height of a <text> block at its resolved size and font."""
+        paragraphs = [c for c in node.children if c.kind == "p"]
+        if not paragraphs:
+            paragraphs = [Node("p", {}, [], node.text or "")]
+        total = 0
+        for para in paragraphs:
+            role = para.attrs.get("role", node.attrs.get("role"))
+            if role is None:
+                role = self._default_role_for_placeholder(node.attrs.get("placeholder"))
+            bundle = self._type_scale(role)
+            if "size" in node.attrs:
+                size = self._points(node.attrs["size"])
+            else:
+                size = self._scale_size_points(bundle.get("size", 17))
+            bold = self._bool_attr_from_hierarchy("bold", para, para, node)
+            if bold is None:
+                bold = bundle.get("weight") == "bold"
+            line_spacing = node.attrs.get("lineSpacing", bundle.get("lineSpacing", 1.0))
+            font = node.attrs.get("font") or self._timeline_font_family(role)
+            text = para.text or "".join(run.text or "" for run in para.children) or "Ag"
+            measurement = self.text_measurer.measure(
+                text,
+                font,
+                size,
+                max(1, width),
+                bold=bool(bold),
+                line_spacing=float(line_spacing),
+            )
+            total += measurement.rendered_height_emu
+            for attr in ("spaceBefore", "spaceAfter"):
+                value = node.attrs.get(attr, bundle.get(attr))
+                if value:
+                    total += self._unit(value, width)
+        return total + self.TEXT_BOX_VERTICAL_INSETS_EMU
 
     def _anchored_stack_box(self, node: Node, parent: Box) -> Box:
         anchor = node.attrs.get("anchor", "none")

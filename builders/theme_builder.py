@@ -49,15 +49,22 @@ class ThemeBuilder:
 
         colors = theme["colors"]
         sysclr_slots = REFERENCE["color_scheme_slots"]["sysclr_slots"]
+        # PowerPoint resolves a:sysClr from the LIVE system color (windowText
+        # -> black, window -> white); lastClr is only a cache hint. Emitting a
+        # custom dk1/lt1 as sysClr silently locks it to black/white, so only
+        # slots that actually ARE the system default may use sysClr.
+        sysclr_defaults = {"windowText": "000000", "window": "FFFFFF"}
         for slot in REFERENCE["color_scheme_slots"]["order"]:
             slot_el = etree.SubElement(clr_scheme, qn("a", slot))
-            if slot in sysclr_slots:
+            value = clean_hex(colors[slot])
+            sys_val = sysclr_slots.get(slot)
+            if sys_val and value.upper() == sysclr_defaults[sys_val]:
                 clr = etree.SubElement(slot_el, qn("a", "sysClr"))
-                clr.set("val", sysclr_slots[slot])
-                clr.set("lastClr", clean_hex(colors[slot]))
+                clr.set("val", sys_val)
+                clr.set("lastClr", value)
             else:
                 clr = etree.SubElement(slot_el, qn("a", "srgbClr"))
-                clr.set("val", clean_hex(colors[slot]))
+                clr.set("val", value)
 
         return clr_scheme
 

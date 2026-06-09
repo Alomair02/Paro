@@ -121,6 +121,21 @@ class ThemeBuilderTests(unittest.TestCase):
             ContentTypeRegistry.THEME,
         )
 
+    def test_custom_dk1_lt1_emit_srgb_not_sysclr(self):
+        # PowerPoint resolves sysClr from the live system color (windowText ->
+        # black); lastClr is only a cache. A brand theme with a non-black dk1
+        # (e.g. Alinma's 512C24 brown) must emit srgbClr or it renders black.
+        theme = sample_theme()
+        theme["colors"]["dk1"] = "512C24"
+        xml = ThemeBuilder(ContentTypeRegistry(), RelationshipRegistry()).build(theme)
+        clr_scheme = parse_xml(xml).find("a:themeElements/a:clrScheme", NSMAP)
+        self.assertIsNone(clr_scheme.find("a:dk1/a:sysClr", NSMAP))
+        self.assertEqual(
+            clr_scheme.find("a:dk1/a:srgbClr", NSMAP).get("val"), "512C24"
+        )
+        # lt1 is still the system default white -> keeps sysClr
+        self.assertIsNotNone(clr_scheme.find("a:lt1/a:sysClr", NSMAP))
+
     def test_second_theme_custom_part_path_is_valid_and_registered(self):
         content_types = ContentTypeRegistry()
         relationships = RelationshipRegistry()

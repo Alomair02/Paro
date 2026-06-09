@@ -1266,5 +1266,72 @@ class EngineHardeningTests(unittest.TestCase):
         self.assertEqual(shape["type"], "pareto")
 
 
+class StackContentSizingTests(unittest.TestCase):
+    """Vertical stacks slot text at measured height, not equal shares."""
+
+    @staticmethod
+    def _shapes(xml):
+        resolved = parse_resolve(xml)
+        return resolved.slides[0].slide_data["shapes"]
+
+    def test_header_takes_measured_height_not_equal_share(self):
+        shapes = self._shapes(
+            '<deck><slide layout="blank" flow="stack">'
+            '<text role="caption">Source note</text>'
+            '<text role="body">A much longer paragraph of body text that will wrap '
+            "across several lines once it is measured against the slide width and "
+            "therefore must claim a taller slot than the one-line caption above it."
+            "</text></slide></deck>"
+        )
+        caption, body = shapes[0], shapes[1]
+        self.assertLess(caption["h"], body["h"] / 2)
+
+    def test_container_child_flexes_into_remaining_space(self):
+        shapes = self._shapes(
+            '<deck><slide layout="blank" flow="stack">'
+            '<text role="caption">Header</text>'
+            '<chart type="column"><categories>A,B</categories>'
+            '<series name="s"><point value="1"/><point value="2"/></series></chart>'
+            "</slide></deck>"
+        )
+        header = next(s for s in shapes if s["type"] == "text_box")
+        chart = next(s for s in shapes if s["type"] == "chart")
+        self.assertGreater(chart["h"], header["h"] * 4)
+
+    def test_justify_center_offsets_content(self):
+        shapes = self._shapes(
+            '<deck><slide layout="blank" flow="stack">'
+            '<stack h="5in" justify="ctr"><text role="caption">centered</text></stack>'
+            "</slide></deck>"
+        )
+        text = shapes[0]
+        # slide pad 0.5in: container top = 457200; a start-justified caption
+        # would sit at the top. Centered must push it well below 1in.
+        self.assertGreater(text["y"], 914400)
+
+    def test_no_flex_overflow_compresses_without_overlap(self):
+        shapes = self._shapes(
+            '<deck><slide layout="blank" flow="stack" gap="0.05in">'
+            '<stack h="1.2in" gap="0.05in">'
+            '<text size="20pt">First block of text content</text>'
+            '<text size="20pt">Second block of text content</text>'
+            '<text size="20pt">Third block of text content</text>'
+            "</stack></slide></deck>"
+        )
+        boxes = sorted((s["y"], s["h"]) for s in shapes if s["type"] == "text_box")
+        for (y1, h1), (y2, _) in zip(boxes, boxes[1:]):
+            self.assertLessEqual(y1 + h1, y2 + 1000)  # 1000 EMU rounding slack
+
+    def test_horizontal_stacks_keep_equal_split(self):
+        shapes = self._shapes(
+            '<deck><slide layout="blank" flow="stack">'
+            '<stack dir="h" h="1in">'
+            '<text role="caption">a</text><text role="caption">bb</text>'
+            "</stack></slide></deck>"
+        )
+        first, second = shapes[0], shapes[1]
+        self.assertEqual(first["w"], second["w"])
+
+
 if __name__ == "__main__":
     unittest.main()
