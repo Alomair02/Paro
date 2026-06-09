@@ -510,6 +510,13 @@ class LayoutResolver:
         style = self.chart_style_registry.get(node.attrs.get("style"))
         finish = self.chart_style_registry.get_finish(node.attrs.get("finish", style.get("finish",)))
 
+        data_labels = node.attrs.get("dataLabels")
+        if data_labels is not None and data_labels not in {"none", "value", "percent", "category"}:
+            raise ValueError(
+                f"<chart> dataLabels='{data_labels}' is invalid "
+                "(expected one of: none, value, percent, category)"
+            )
+
         shape = {
             "type": chart_type if chart_type in CHARTEX else "chart",
             "name": node.attrs.get("title", "Chart"),
@@ -520,6 +527,7 @@ class LayoutResolver:
             "subtotals": subtotals,
             "stacked": node.attrs.get("stacked", "false").lower(),
             "legend": node.attrs.get("legend"),
+            "data_labels": data_labels,
             "style": style,
             "finish": finish,
             **actual_box.as_shape_geometry(),

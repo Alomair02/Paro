@@ -153,7 +153,9 @@ CHART_STYLES = {
         "gridWidth": "0.5pt",
         "axisColor": "dk2",
         "legendPos": "b",              # b | t | l | r | none
-        "dataLabels": "none",          # none | value | percent
+        # Default-on for the label-bearing types (column/bar/pie): a bar
+        # without its value forces the reader back to the axis (probe #7).
+        "dataLabels": "value",         # none | value | percent | category
         "finish": "flat",
     },
     "minimal": {

@@ -73,6 +73,31 @@ def _num_ref(parent, tag, ref_formula, values):
         _c(pt, "v", text=str(v))
     return wrapper
 
+# Chart types whose value axis must baseline at zero when the data allows it.
+# Bars/areas encode magnitude as length from the baseline, so a non-zero auto
+# minimum exaggerates differences (probe finding #7). Lines legitimately zoom.
+ZERO_BASELINE_TYPES = {"column", "bar", "area"}
+
+# Chart types that emit c:dLbls in v1. Line/area/scatter labels are clutter.
+DATA_LABEL_TYPES = {"column", "bar", "pie"}
+
+DATA_LABEL_FLAGS = {"value": "showVal", "percent": "showPercent", "category": "showCatName"}
+
+
+def _emit_dlbls(plot, mode):
+    """c:dLbls with one show-flag on; every flag is explicit, schema order."""
+    dlbls = _c(plot, "dLbls")
+    on = DATA_LABEL_FLAGS[mode]
+    for flag in ("showLegendKey", "showVal", "showCatName",
+                 "showSerName", "showPercent", "showBubbleSize"):
+        _c(dlbls, flag, val="1" if flag == on else "0")
+
+
+def _series_min(series_list) -> float:
+    values = [v for s in series_list for v in s.get("values", [])]
+    return min(values) if values else 0
+
+
 def _apply_bar_finish(sp_pr, tone, finish):
     """Fill + border + shadow for a bar/column/area series mark, per finish."""
     fill_mode = finish.get("fillMode", "solid")
@@ -97,13 +122,21 @@ def _apply_bar_finish(sp_pr, tone, finish):
             "alpha": shadow["alpha"],
         }))
 
-def build_chart_part_xml(workbook_rid: str, categories: list, series_list: list, chart_type: str = "column", style: dict | None = None, finish: dict | None = None, stacked: str = "false", legend: str | None = None) -> str:
+def build_chart_part_xml(workbook_rid: str, categories: list, series_list: list, chart_type: str = "column", style: dict | None = None, finish: dict | None = None, stacked: str = "false", legend: str | None = None, data_labels: str | None = None) -> str:
     """
     series_list: [{"name": str, "values": [num], "tone": str|None}, ...]
     chart_type: column|bar|line|area|pie
+    data_labels: none|value|percent|category — explicit DSL override; falls
+    back to the style's dataLabels. Only DATA_LABEL_TYPES emit labels in v1.
     """
     style = style or {}
     finish = finish or {}
+    effective_labels = data_labels or style.get("dataLabels", "none")
+    if effective_labels != "none" and effective_labels not in DATA_LABEL_FLAGS:
+        raise ValueError(
+            f"Invalid dataLabels '{effective_labels}' "
+            f"(expected one of: none, {', '.join(sorted(DATA_LABEL_FLAGS))})"
+        )
     palette = style.get("palette") or ["accent1", "accent2", "accent3", "accent4", "accent5", "accent6"]
     # Fresh per chart part: dispenses 111111111, 222222222, 333333333, 444444444
     # in call order. One allocator per build_chart_part_xml call, so ids never
@@ -192,10 +225,12 @@ def build_chart_part_xml(workbook_rid: str, categories: list, series_list: list,
             _c(ax, "delete", val=delete); _c(ax, "axPos", val="b")
             _c(ax, "crossAx", val=cross)
 
-        def emit_val_ax(ax_id, cross, pos, gridlines=False, crosses=None):
+        def emit_val_ax(ax_id, cross, pos, gridlines=False, crosses=None, zero_min=False):
             ax = _c(plot_area, "valAx")
             _c(ax, "axId", val=ax_id)
             sc = _c(ax, "scaling"); _c(sc, "orientation", val="minMax")
+            if zero_min:
+                _c(sc, "min", val="0")
             _c(ax, "delete", val="0"); _c(ax, "axPos", val=pos)
             if gridlines:
                 _c(ax, "majorGridlines")
@@ -203,16 +238,28 @@ def build_chart_part_xml(workbook_rid: str, categories: list, series_list: list,
             if crosses:
                 _c(ax, "crosses", val=crosses)
 
+        def axis_zero_min(axis_name):
+            sers = [s for s in series_list if s.get("axis", "primary") == axis_name]
+            if not any(s.get("type") in ZERO_BASELINE_TYPES for s in sers):
+                return False
+            return _series_min(sers) >= 0
+
         emit_cat_ax(pri_cat, pri_val)
-        emit_val_ax(pri_val, pri_cat, "l", gridlines=(style.get("gridlines") == "major"))
+        emit_val_ax(pri_val, pri_cat, "l",
+                    gridlines=(style.get("gridlines") == "major"),
+                    zero_min=axis_zero_min("primary"))
         if uses_secondary:
-            emit_val_ax(sec_val, sec_cat, "r", crosses="max")
+            emit_val_ax(sec_val, sec_cat, "r", crosses="max",
+                        zero_min=axis_zero_min("secondary"))
             emit_cat_ax(sec_cat, sec_val, delete="1")
 
     elif chart_type in ("column", "bar"):
         plot = _c(plot_area, "barChart")
         _c(plot, "barDir", val="col" if chart_type == "column" else "bar")
-        _c(plot, "grouping", val="clustered")
+        if stacked in ("true", "percent"):
+            _c(plot, "grouping", val="percentStacked" if stacked == "percent" else "stacked")
+        else:
+            _c(plot, "grouping", val="clustered")
         _c(plot, "varyColors", val="0")
         needs_value_axis = True
     elif chart_type == "line":
@@ -222,7 +269,10 @@ def build_chart_part_xml(workbook_rid: str, categories: list, series_list: list,
         needs_value_axis = True
     elif chart_type == "area":
         plot = _c(plot_area, "areaChart")
-        _c(plot, "grouping", val="standard")
+        if stacked in ("true", "percent"):
+            _c(plot, "grouping", val="percentStacked" if stacked == "percent" else "stacked")
+        else:
+            _c(plot, "grouping", val="standard")
         _c(plot, "varyColors", val="0")
         needs_value_axis = True
     elif chart_type == "radar":
@@ -327,6 +377,12 @@ def build_chart_part_xml(workbook_rid: str, categories: list, series_list: list,
             if chart_type == "line":
                 _c(ser, "smooth", val="0")
 
+    # --- data labels (after ser*, before gapWidth/overlap/axId per schema) ---
+    if effective_labels != "none" and chart_type in DATA_LABEL_TYPES:
+        _emit_dlbls(plot, effective_labels)
+    if chart_type in ("column", "bar") and stacked in ("true", "percent"):
+        _c(plot, "overlap", val="100")
+
     # --- axis ids on plot element (pie has none) ---
     if needs_value_axis:
         _c(plot, "axId", val=cat_ax_id)
@@ -344,6 +400,8 @@ def build_chart_part_xml(workbook_rid: str, categories: list, series_list: list,
             _c(val_ax, "majorGridlines")
         _c(val_ax, "axId", val=val_ax_id)
         sc2 = _c(val_ax, "scaling"); _c(sc2, "orientation", val="minMax")
+        if chart_type in ZERO_BASELINE_TYPES and _series_min(series_list) >= 0:
+            _c(sc2, "min", val="0")
         _c(val_ax, "delete", val="0"); _c(val_ax, "axPos", val="l")
         _c(val_ax, "crossAx", val=cat_ax_id)
 
@@ -373,6 +431,7 @@ def emit_chart(shape_data, slide_state, relationships, content_types):
     finish = shape_data.get("finish")
     stacked = shape_data.get("stacked", "false")
     legend = shape_data.get("legend")
+    data_labels = shape_data.get("data_labels")
     chart_part_path = slide_state.next_chart_path()
     chart_index = chart_part_path.rsplit("chart", 1)[-1].split(".")[0]
     workbook_path = f"xl/embeddings/Microsoft_Excel_Worksheet{chart_index}.xlsx"
@@ -393,7 +452,8 @@ def emit_chart(shape_data, slide_state, relationships, content_types):
                                                                            style=style,
                                                                              finish=finish,
                                                                                stacked=stacked,
-                                                                               legend=legend)
+                                                                               legend=legend,
+                                                                               data_labels=data_labels)
     content_types.add_override(chart_part_path, ContentTypeRegistry.CHART)
 
     rid = relationships.add(

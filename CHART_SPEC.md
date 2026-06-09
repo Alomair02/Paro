@@ -34,7 +34,10 @@ What `<chart>` carries in the DSL. Shared across nearly all chart types — the 
 | `finish` | registered finish name | per-style default | Overrides the style's finish for this chart |
 | `legend` | `none`, `top`, `bottom`, `left`, `right` | per-style | Legend placement |
 | `stacked` | `false`, `true`, `percent` | `false` | For column/bar/area: clustered (false), stacked, or 100%-stacked |
+| `dataLabels` | `none`, `value`, `percent`, `category` | per-style | Explicit override of the style's data-label setting. Only column/bar/pie emit labels in v1; line/area/scatter never do (clutter). |
 | `w`, `h`, `x`, `y` | unit / `%` | from container | Geometry |
+
+**Zero-baseline rule (data honesty, not style):** for `column`, `bar`, and `area` charts — and combo axes hosting any such series — the value axis emits an explicit minimum of 0 whenever every value on that axis is non-negative. Bars encode magnitude as length from the baseline; an auto-scaled non-zero minimum exaggerates differences and misleads non-technical readers. Line and scatter charts keep auto scaling (zooming a trend is legitimate). Data containing negatives also keeps auto scaling. There is deliberately no DSL escape hatch to float a bar baseline.
 
 | `<series>` attribute | Values | Default | Notes |
 |---|---|---|---|
@@ -128,7 +131,7 @@ Charts reuse the **finish preset** concept proven on the timeline: a named, cura
 A curated starter set — enough to look excellent across the six types, expandable later. Each is one entry in its registry.
 
 ### Chart styles
-- **`clean`** (default): single-accent or cycled palette, major horizontal gridlines (low-emphasis), no plot border, legend bottom, no data labels, axis/title/legend roles = `caption`/`heading`/`caption`. The neutral, professional default.
+- **`clean`** (default): single-accent or cycled palette, major horizontal gridlines (low-emphasis), no plot border, legend bottom, data labels on (`value`) for the label-bearing types (column/bar/pie — probe finding #7: a bar without its value forces the reader back to the axis), axis/title/legend roles = `caption`/`heading`/`caption`. The neutral, professional default. Set `dataLabels="none"` on the chart to opt out.
 - **`minimal`**: no gridlines, no axis lines (or very light), no legend border, data labels on (`value`), monochrome-to-sequential palette. Calm, label-driven — good for single-series emphasis.
 - **`editorial`**: cycled accent palette, major-minor gridlines, plot border, legend top, bolder title role. More structured/reporty.
 - **`vivid`**: full accent-cycle palette, no gridlines, data labels `value`, slightly larger gap width for punch. Presentation-forward.

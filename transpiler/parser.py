@@ -115,7 +115,7 @@ ALLOWED_ATTRS = {
     "group": {"label"},
     "task": {"label", "start", "span", "tone"},
     "milestone": {"label", "at"},
-    "chart": {"type", "title", "style", "finish", "legend", "stacked"}
+    "chart": {"type", "title", "style", "finish", "legend", "stacked", "dataLabels"}
     | GRID_PLACEMENT_ATTRS
     | GEOMETRY_ATTRS,
     "categories": set(),
