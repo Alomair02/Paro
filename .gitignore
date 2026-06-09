@@ -10,4 +10,4 @@ __pycache__/
 
 .venv/
 
-transpiler/__pycache__
+transpiler/__pycache__node_modules/

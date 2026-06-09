@@ -264,6 +264,8 @@ class MasterBuilderTests(unittest.TestCase):
             [
                 "../slideLayouts/slideLayout1.xml",
                 "../slideLayouts/slideLayout2.xml",
+                "../slideLayouts/slideLayout5.xml",
+                "../slideLayouts/slideLayout6.xml",
                 "../slideLayouts/slideLayout3.xml",
                 "../slideLayouts/slideLayout4.xml",
             ],

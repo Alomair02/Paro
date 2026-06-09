@@ -27,6 +27,16 @@ LAYOUT_DEFINITIONS = {
         "reference_key": "titleBody",
         "name": "Title and Content",
     },
+    "titleOnly": {
+        "index": 5,
+        "reference_key": "titleOnly",
+        "name": "Title Only",
+    },
+    "twoContent": {
+        "index": 6,
+        "reference_key": "twoContent",
+        "name": "Two Content",
+    },
     "blank": {
         "index": 3,
         "reference_key": "blank",
