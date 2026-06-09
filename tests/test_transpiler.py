@@ -1205,6 +1205,53 @@ class EngineHardeningTests(unittest.TestCase):
         )
         self.assertEqual(para["role"], "body")
 
+    def test_chart_without_any_categories_rejected(self):  # #8b
+        with self.assertRaises(ValueError) as ctx:
+            parse_resolve(
+                '<deck><slide layout="blank" flow="free">'
+                '<chart type="column" x="1in" y="1in" w="6in" h="4in">'
+                '<series name="Orphan"><point value="10"/><point value="20"/></series>'
+                '</chart></slide></deck>'
+            )
+        self.assertIn("categories", str(ctx.exception))
+
+    def test_chart_categories_derived_from_point_cat_accepted(self):  # #8b must-not-over-tighten
+        parse_resolve(
+            '<deck><slide layout="blank" flow="free">'
+            '<chart type="column" x="1in" y="1in" w="6in" h="4in">'
+            '<series name="s"><point cat="A" value="1"/><point cat="B" value="2"/></series>'
+            '</chart></slide></deck>'
+        )
+
+    def test_histogram_without_categories_accepted(self):  # #8b exemption
+        parse_resolve(
+            '<deck><slide layout="blank" flow="free">'
+            '<chart type="histogram" x="1in" y="1in" w="6in" h="4in">'
+            '<series name="obs"><point value="1"/><point value="2"/><point value="2"/></series>'
+            '</chart></slide></deck>'
+        )
+
+    def test_free_container_offset_applied_once(self):  # #3 regression
+        resolved = parse_resolve(
+            '<deck><slide layout="blank" flow="free">'
+            '<free x="1in" y="1in" w="6in" h="4in">'
+            '<text x="0.5in" y="0.25in" w="2in" h="1in">c</text>'
+            '</free></slide></deck>'
+        )
+        shape = resolved.slides[0].slide_data["shapes"][0]
+        self.assertEqual(shape["x"], int(1.5 * 914400))
+        self.assertEqual(shape["y"], int(1.25 * 914400))
+
+    def test_pareto_chart_reachable_from_dsl(self):  # spec-map/resolver drift
+        resolved = parse_resolve(
+            '<deck><slide layout="blank" flow="free">'
+            '<chart type="pareto" x="1in" y="1in" w="6in" h="4in">'
+            '<series name="Defects"><point cat="A" value="1"/><point cat="B" value="2"/></series>'
+            '</chart></slide></deck>'
+        )
+        shape = resolved.slides[0].slide_data["shapes"][0]
+        self.assertEqual(shape["type"], "pareto")
+
 
 if __name__ == "__main__":
     unittest.main()

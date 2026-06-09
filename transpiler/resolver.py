@@ -188,7 +188,9 @@ class LayoutResolver:
                 next_row += 1
 
     def _resolve_free(self, node: Node, box: Box, parent_kind: str):
-        box = self._box_for_node(node, box)
+        # box was already resolved by _resolve_node at dispatch (as for
+        # stack/grid). Re-applying _box_for_node here double-applied the
+        # container's own offset to every child (probe finding #3).
         self._record_sibling_font_group(node.children, node.kind)
         for child in node.children:
             if child.kind == "line":
@@ -410,7 +412,7 @@ class LayoutResolver:
 
         chart_type = node.attrs["type"]
         CLASSIC = {"bar", "column", "line", "pie", "area", "scatter", "combo", "radar"}
-        CHARTEX = {"funnel", "waterfall", "histogram", "boxWhisker", "treemap", "sunburst"}
+        CHARTEX = {"funnel", "waterfall", "histogram", "boxWhisker", "pareto", "treemap", "sunburst"}
         if chart_type not in CLASSIC | CHARTEX:
             raise ValueError(f"Unsupported chart type: {chart_type}")
         
@@ -499,6 +501,16 @@ class LayoutResolver:
                     "values": values,
                 })
                 
+        # --- #8b: category types with no categories at all ---
+        # #8 catches count mismatch but only when categories exist; a series of
+        # bare <point value=.../> with no <categories> slipped through and PP
+        # plotted unlabeled bars. histogram is exempt (raw values, PP bins).
+        if chart_type not in ("scatter", "histogram") and not categories:
+            raise ValueError(
+                f"<chart type='{chart_type}'> has no categories: "
+                "add a <categories> child or a cat= attribute on every <point>"
+            )
+
         # subtotal indices (waterfall): collected from the first series' points.
         # Empty for every other type — the spec map decides who uses it.
         first_points = [p for p in series_nodes[0].children if p.kind == "point"]
