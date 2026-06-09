@@ -1,0 +1,14 @@
+<deck>
+  <slide layout="titleOnly" flow="stack">
+    <text role="title">Nested containers + styled card</text>
+    <stack dir="v" gap="0.2in" pad="0.25in" fill="lt2" line="accent1" lineWidth="1.5pt" radius="0.12in">
+      <text role="heading">This stack is a styled card</text>
+      <grid cols="2" gap="0.25in">
+        <text col="1" role="body">Left grid cell — managed.</text>
+        <free col="2" x="0" y="0" w="3in" h="1.5in">
+          <text x="0.1in" y="0.1in" w="2.8in" h="1.3in" role="body">Free nested inside grid inside styled stack inside slide stack. Does geometry compose?</text>
+        </free>
+      </grid>
+    </stack>
+  </slide>
+</deck>

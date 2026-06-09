@@ -1,0 +1,9 @@
+<deck>
+  <slide layout="blank" flow="free">
+    <text x="1in" y="0.4in" w="11in" h="0.8in" role="title">Customer satisfaction by region</text>
+    <chart type="bar" title="CSAT score (1-5)" x="1in" y="1.4in" w="8in" h="5in">
+      <categories>North, South, East, West</categories>
+      <series name="CSAT"><point cat="North" value="3.8"/><point cat="South" value="4.5"/><point cat="East" value="4.1"/><point cat="West" value="3.9"/></series>
+    </chart>
+  </slide>
+</deck>

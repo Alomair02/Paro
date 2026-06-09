@@ -128,10 +128,10 @@ all locked in `tests/test_transpiler.py` class `EngineHardeningTests` (rejects-b
 accepts-good halves so the guards can't over-tighten):
 
 - **#2 — missing layouts** (`titleOnly`/`twoContent`) → implemented from ENGINE_REFERENCE coords.
-- **#3 — `_resolve_free` double-applied container geometry** → fixed (it re-called `_box_for_node`
-  on a box already resolved at dispatch; stack/grid don't, free was the outlier). Geometry now
-  applied once. *(Still owes a dedicated regression test: free container at explicit offset →
-  child absolute box = offset applied once.)*
+- **#3 — `_resolve_free` double-applied container geometry** → **the fix described here was
+  never actually applied** ("Built ≠ built" struck this very entry). Actually fixed in commit
+  `c572a9d`, with the regression test this entry owed
+  (`test_free_container_offset_applied_once`).
 - **#6 — parser crashed on XML comments** (lxml comment nodes have non-str tags) → fixed at the
   parse entry: `etree.XMLParser(remove_comments=True, remove_pis=True)`. Models emit comments
   constantly; this would have hit nearly every agent generation.
@@ -143,7 +143,29 @@ accepts-good halves so the guards can't over-tighten):
   surfaced that the `parse_resolve` test helper *stubs theme colors to defaults* and never
   exercised real inline-theme color resolution — the #9 tests are the first to cover that path.)
 
-## Probe findings still OPEN (these shape the agent layer)
+## Probe findings — RESOLVED 2026-06-09 (commits 9ff969b..c572a9d)
+
+Everything in the section below is now fixed and locked in tests; it is kept for the reasoning.
+- **#5** → placeholder text now derives its default role from the placeholder type
+  (`title`/`ctrTitle`→`title`, `subTitle`→`subheading`, `body`→`body`); explicit `role=`
+  overrides; `placeholder=` and `role=` paths produce identical styling. The actual pre-fix
+  behavior was worse than "flat": placeholder titles got an explicit body-size run (17pt).
+- **#7** → column/bar/area value axes baseline at zero when data is non-negative (combo:
+  per-axis); the builder previously ignored every style's `dataLabels` entirely — now
+  column/bar/pie emit labels, `clean` defaults to `value`, and a `dataLabels` chart attribute
+  overrides. Bonus: single-type `stacked=` was silently ignored (hardcoded `clustered`) — fixed.
+- **#8b** → category charts with no categories at all now fail with a recoverable message;
+  scatter/histogram exempt.
+- **#1/#4** (`<free>` geometry) → root cause was largely the un-applied #3 fix doubling offsets;
+  with geometry applied once, free coordinates behave as documented. Spec still deserves a worked
+  example.
+- Also: `pareto` was built in the chartEx builder but missing from the resolver's CHARTEX set —
+  unreachable from DSL. Added + end-to-end test. The 6-layout work claimed done above was only
+  half-landed on this machine (fixtures/master test missing) — completed, re-blessed, bite-checked.
+- The probe corpus lives in `probe_batch/` (11 DSL files); 07 now correctly fails, the rest
+  transpile. Suite: 131 tests.
+
+## Original probe findings (HISTORICAL — see resolution above)
 
 The probe's headline conclusion: **the agent layer's hard problem is design judgment and data
 honesty, NOT DSL syntax.** A cold model given standing scaffolding produced a structurally-correct,

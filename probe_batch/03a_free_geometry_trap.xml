@@ -1,0 +1,6 @@
+<deck>
+  <slide layout="blank">
+    <text x="1in" y="1.8in" w="6in" h="1in" role="heading">I expected this at (1in, 1.8in) absolute</text>
+    <text x="1in" y="3.2in" w="6in" h="1in" role="body">And this lower down. But the slide defaults to flow="stack", so these coordinates may be ignored and both texts stacked at top-left instead.</text>
+  </slide>
+</deck>

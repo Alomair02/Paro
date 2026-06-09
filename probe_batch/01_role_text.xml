@@ -1,0 +1,11 @@
+<deck>
+  <slide layout="titleOnly" flow="stack">
+    <stack dir="v" gap="0.15in">
+      <text role="title">Quarterly Business Review</text>
+      <text role="heading">Revenue grew across every region</text>
+      <text role="subheading">Q3 FY26 — prepared for the leadership team</text>
+      <text role="body">Each region beat plan. The strongest growth came from EMEA, where new enterprise logos drove a step change in recurring revenue. APAC continued its steady climb.</text>
+      <text role="caption">Source: internal finance reporting, unaudited.</text>
+    </stack>
+  </slide>
+</deck>

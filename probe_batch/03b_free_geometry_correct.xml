@@ -1,0 +1,6 @@
+<deck>
+  <slide layout="blank" flow="free">
+    <text x="1in" y="1.8in" w="6in" h="1in" role="heading">This SHOULD land at (1in, 1.8in)</text>
+    <text x="1in" y="3.2in" w="6in" h="1in" role="body">And this at (1in, 3.2in). Same coordinates as 03a, but flow="free" on the slide means they are honored. If 03a and 03b render differently, that gap IS finding #1/#4.</text>
+  </slide>
+</deck>

@@ -1,0 +1,36 @@
+<deck>
+  <slide layout="title" flow="stack">
+    <text placeholder="ctrTitle">Project Atlas</text>
+    <text placeholder="subTitle">FY26 planning review</text>
+  </slide>
+  <slide layout="titleBody" flow="stack">
+    <text placeholder="title">Where we are</text>
+    <stack dir="v" gap="0.1in">
+      <text role="body">Three workstreams are on track and one is at risk.</text>
+      <text role="body">The at-risk stream is recoverable with one additional engineer.</text>
+      <text role="bodySmall">Detail follows on the next slides.</text>
+    </stack>
+  </slide>
+  <slide layout="titleOnly" flow="stack">
+    <text role="title">Headcount by team</text>
+    <chart type="column" title="Engineers per team">
+      <categories>Platform, Product, Data, Infra</categories>
+      <series name="Headcount"><point cat="Platform" value="8"/><point cat="Product" value="12"/><point cat="Data" value="5"/><point cat="Infra" value="6"/></series>
+    </chart>
+  </slide>
+  <slide layout="titleOnly" flow="stack">
+    <text role="title">Delivery plan</text>
+    <timeline style="swimlane" periods="8" unit="month">
+      <group label="Platform">
+        <task label="Foundations" start="1" span="3" tone="accent1"/>
+        <task label="Hardening" start="4" span="2" tone="accent1"/>
+      </group>
+      <group label="Product">
+        <task label="MVP" start="2" span="4" tone="accent2"/>
+        <task label="GA" start="6" span="2" tone="accent2"/>
+      </group>
+      <milestone label="Beta" at="5"/>
+      <milestone label="Launch" at="8"/>
+    </timeline>
+  </slide>
+</deck>

@@ -1,0 +1,5 @@
+<deck>
+  <slide layout="blank" flow="free">
+    <text x="1in" y="1in" w="2in" h="0.5in" role="body">This is a deliberately long paragraph crammed into a two-inch by half-inch box, far more text than can possibly fit in that space at body size, specifically to see whether the validator emits a text_overflow warning and what the resolver does with the overrun.</text>
+  </slide>
+</deck>

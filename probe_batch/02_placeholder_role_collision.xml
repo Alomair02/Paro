@@ -1,0 +1,6 @@
+<deck>
+  <slide layout="titleBody" flow="stack">
+    <text placeholder="title" role="title">This title sets BOTH placeholder and role</text>
+    <text placeholder="body" role="body">This body sets both too. If placeholder wins and role no-ops, both of these render at master-default sizing, not the designed type scale — and nothing tells the author the role was ignored.</text>
+  </slide>
+</deck>

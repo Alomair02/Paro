@@ -1,0 +1,23 @@
+<deck>
+  <slide layout="blank" flow="free">
+    <text x="1in" y="0.4in" w="11in" h="0.8in" role="title">Single data point</text>
+    <chart type="bar" title="One bar" x="1in" y="1.4in" w="4in" h="4in">
+      <categories>Only</categories>
+      <series name="S"><point cat="Only" value="42"/></series>
+    </chart>
+  </slide>
+  <slide layout="blank" flow="free">
+    <text x="1in" y="0.4in" w="11in" h="0.8in" role="title">All-equal values</text>
+    <chart type="column" title="Flatline" x="1in" y="1.4in" w="6in" h="4in">
+      <categories>A, B, C, D</categories>
+      <series name="S"><point cat="A" value="100"/><point cat="B" value="100"/><point cat="C" value="100"/><point cat="D" value="100"/></series>
+    </chart>
+  </slide>
+  <slide layout="blank" flow="free">
+    <text x="1in" y="0.4in" w="11in" h="0.8in" role="title">Negative value present</text>
+    <chart type="column" title="Net change" x="1in" y="1.4in" w="6in" h="4in">
+      <categories>Q1, Q2, Q3, Q4</categories>
+      <series name="Net"><point cat="Q1" value="20"/><point cat="Q2" value="-15"/><point cat="Q3" value="35"/><point cat="Q4" value="-5"/></series>
+    </chart>
+  </slide>
+</deck>
