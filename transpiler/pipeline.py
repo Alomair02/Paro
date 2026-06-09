@@ -39,9 +39,12 @@ def transpile(
     output_path: str | Path | None = None,
     *,
     auto_shrink_text: bool = False,
+    themes: dict[str, dict] | None = None,
 ) -> Path:
     """Transpile an XML DSL file and return the generated PPTX path."""
-    return transpile_deck(dsl_xml_path, output_path, auto_shrink_text=auto_shrink_text).pptx_path
+    return transpile_deck(
+        dsl_xml_path, output_path, auto_shrink_text=auto_shrink_text, themes=themes
+    ).pptx_path
 
 
 def transpile_deck(
@@ -49,13 +52,19 @@ def transpile_deck(
     output_path: str | Path | None = None,
     *,
     auto_shrink_text: bool = False,
+    themes: dict[str, dict] | None = None,
 ) -> TranspileResult:
-    """Run parse -> resolve -> validate -> engine -> zip."""
+    """Run parse -> resolve -> validate -> engine -> zip.
+
+    themes: extra registry themes (e.g. an ingested template bundle via
+    ingestion.bundle_to_registry_themes). An inline <theme> with the same
+    name wins — an author's explicit override outranks ingestion.
+    """
     dsl_xml_path = Path(dsl_xml_path)
     ast = DSLParser().parse_file(str(dsl_xml_path))
     output = Path(output_path) if output_path else dsl_xml_path.with_suffix(".pptx")
 
-    theme_registry = ThemeRegistry(_inline_theme_map(ast))
+    theme_registry = ThemeRegistry({**(themes or {}), **_inline_theme_map(ast)})
     layout_registry = LayoutRegistry()
     shape_library = ShapeLibrary()
 
