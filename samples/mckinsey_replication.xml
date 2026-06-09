@@ -1,0 +1,47 @@
+<deck theme="mck" size="16:9" background="#051C2C">
+  <theme name="mck"
+         dk1="051C2C" lt1="FFFFFF" dk2="B9C2C9" lt2="E8EBED"
+         accent1="2E8AFF" accent2="3C96FF" accent3="1F4E79"
+         accent4="00A9F4" accent5="034B6F" accent6="627D8C"
+         hlink="2E8AFF" folHlink="627D8C"
+         heading="Georgia" body="Arial"/>
+
+  <!-- Cover: dark navy, serif title, wave/earth artwork right -->
+  <slide layout="blank" flow="free">
+    <image src="samples/assets/mck_cover_art.png" x="6.67in" y="0in" w="6.66in" h="7.5in" fit="cover"/>
+    <text x="0.6in" y="0.4in" w="3.5in" h="1in" font="Georgia" size="19pt" color="lt1" lineSpacing="1.0">
+      <p>McKinsey</p>
+      <p>      &amp; Company</p>
+    </text>
+    <text x="0.6in" y="2.7in" w="5.4in" h="1.9in" font="Georgia" size="42pt" bold="true" color="lt1" lineSpacing="1.05">
+      <p>Taking action</p>
+      <p>on nature</p>
+    </text>
+    <text x="0.6in" y="4.55in" w="4in" h="0.5in" size="21pt" color="lt1">How to get started</text>
+    <text x="0.6in" y="5.1in" w="4in" h="0.4in" size="13pt" color="lt1">January 25, 2024</text>
+    <text x="0.6in" y="6.6in" w="4.2in" h="0.7in" size="8pt" color="dk2" lineSpacing="1.2">
+      <p>CONFIDENTIAL AND PROPRIETARY</p>
+      <p>Any use of this material without specific permission of McKinsey &amp; Company is strictly prohibited</p>
+    </text>
+  </slide>
+
+  <!-- Agenda: full-bleed photo left, timetable right -->
+  <slide layout="blank" flow="free">
+    <image src="samples/assets/mck_hands.png" x="0in" y="0in" w="6.66in" h="7.5in" fit="cover"/>
+    <text x="7in" y="1.45in" w="5.7in" h="0.55in" size="22pt" bold="true" color="lt1">Agenda for today's webinar</text>
+    <line x1="7in" y1="2.1in" x2="12.7in" y2="2.1in" color="lt1" width="0.75pt"/>
+    <grid x="7.35in" y="2.45in" w="5.35in" h="3.4in" cols="12" gap="0.12in">
+      <text col="1" row="1" colspan="4" size="16pt" color="lt1">12:00-12:05</text>
+      <text col="5" row="1" colspan="8" size="16pt" color="lt1">Welcome and framing</text>
+      <text col="1" row="2" colspan="4" size="16pt" color="lt1">12:05-12:15</text>
+      <text col="5" row="2" colspan="8" size="16pt" color="lt1">Taking action on nature</text>
+      <text col="1" row="3" colspan="4" size="16pt" color="lt1">12:15-12:35</text>
+      <text col="5" row="3" colspan="8" size="16pt" color="lt1">Panel discussion</text>
+      <text col="1" row="4" colspan="4" size="16pt" color="lt1">12:35-12:45</text>
+      <text col="5" row="4" colspan="8" size="16pt" color="lt1">Audience Q&amp;A</text>
+      <text col="1" row="5" colspan="4" size="16pt" color="lt1">12:45-12:50</text>
+      <text col="5" row="5" colspan="8" size="16pt" color="lt1">Path forward and closing</text>
+    </grid>
+    <text x="10.4in" y="7.08in" w="2.5in" h="0.3in" size="9pt" color="lt1" align="r">McKinsey &amp; Company   2</text>
+  </slide>
+</deck>

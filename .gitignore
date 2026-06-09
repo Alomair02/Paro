@@ -11,3 +11,4 @@ __pycache__/
 .venv/
 
 transpiler/__pycache__node_modules/
+samples/assets/

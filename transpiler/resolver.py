@@ -151,7 +151,7 @@ class LayoutResolver:
         self._emit_container_background(node, box)
         inner = box.inset(self._unit(node.attrs.get("pad", "0"), min(box.w, box.h)))
         cols = int(node.attrs.get("cols", 12))
-        rows = int(node.attrs.get("rows", self._grid_auto_rows(node.children)))
+        rows = int(node.attrs.get("rows", self._grid_auto_rows(node.children, cols)))
         gap_default = self._unit(node.attrs.get("gap", self.DEFAULT_GAP), inner.w)
         col_gap = self._unit(node.attrs.get("colgap"), inner.w, gap_default)
         row_gap = self._unit(node.attrs.get("rowgap"), inner.h, gap_default)
@@ -1458,12 +1458,24 @@ class LayoutResolver:
     def _append_shape(self, shape: dict[str, Any]):
         self._resolved_slide.slide_data["shapes"].append(shape)
 
-    def _grid_auto_rows(self, children: list[Node]) -> int:
+    def _grid_auto_rows(self, children: list[Node], cols: int) -> int:
+        """Simulate the placement loop's auto-flow exactly. The old version
+        only looked at explicit row= attrs, so an auto-flowing grid (e.g. 4
+        children in 2 columns) computed rows=1 while placement wrapped to
+        row 2 — and the grid_bounds validator rejected the resolver's own
+        layout."""
         highest = 1
+        next_col = 1
+        next_row = 1
         for child in children:
-            row = int(child.attrs.get("row", highest))
+            row = int(child.attrs.get("row", next_row))
+            colspan = int(child.attrs.get("colspan", 1))
             rowspan = int(child.attrs.get("rowspan", 1))
             highest = max(highest, row + rowspan - 1)
+            next_col += colspan
+            if next_col > cols:
+                next_col = 1
+                next_row += 1
         return highest
 
     def _timeline_labels(self, node: Node, periods: int) -> list[str]:

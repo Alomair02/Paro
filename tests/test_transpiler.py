@@ -1242,6 +1242,19 @@ class EngineHardeningTests(unittest.TestCase):
         self.assertEqual(shape["x"], int(1.5 * 914400))
         self.assertEqual(shape["y"], int(1.25 * 914400))
 
+    def test_grid_auto_flow_wraps_rows(self):  # auto-rows ignored auto-flow
+        resolved = parse_resolve(
+            '<deck><slide layout="blank" flow="stack">'
+            '<grid cols="2" h="4in">'
+            "<text>a</text><text>b</text><text>c</text><text>d</text>"
+            "</grid></slide></deck>"
+        )
+        placements = resolved.slides[0].grid_placements
+        self.assertEqual(max(p["row"] for p in placements), 2)
+        self.assertTrue(all(p["rows"] == 2 for p in placements))
+        issues = Validator(LayoutRegistry()).validate(resolved)
+        self.assertFalse([i for i in issues if i.severity == "error"])
+
     def test_pareto_chart_reachable_from_dsl(self):  # spec-map/resolver drift
         resolved = parse_resolve(
             '<deck><slide layout="blank" flow="free">'

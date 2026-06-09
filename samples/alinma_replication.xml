@@ -1,0 +1,141 @@
+<deck theme="alinma" size="16:9">
+  <theme name="alinma"
+         dk1="512C24" lt1="FFFFFF" dk2="53565A" lt2="E2EEF0"
+         accent1="6CABB2" accent2="6D5A52" accent3="A08C82"
+         accent4="6E7277" accent5="0097A9" accent6="75787B"
+         hlink="0097A9" folHlink="53565A"
+         heading="Corbel" body="Corbel"/>
+
+  <!-- Cover: left text panel, right photo block, pale strip bottom-left -->
+  <slide layout="blank" flow="free">
+    <shape x="0in" y="5.45in" w="4.85in" h="2.05in" fill="lt2" line="none"/>
+    <image src="samples/assets/alinma_cover_photo.png" x="4.85in" y="0.25in" w="8.48in" h="7.25in" fit="cover"/>
+    <text x="0.6in" y="1.5in" w="4in" h="1.8in" size="40pt" color="dk1" lineSpacing="1.08">
+      <p>Investor</p>
+      <p>Presentation</p>
+    </text>
+    <text x="0.6in" y="3.5in" w="3in" h="0.5in" size="20pt" bold="true" color="accent1">1Q 2024</text>
+    <text x="0.6in" y="4.3in" w="3in" h="0.5in" size="16pt" color="dk2">May 2024</text>
+  </slide>
+
+  <!-- KPI dashboard: nested outlined stat panels -->
+  <slide layout="blank" flow="stack" pad="0.4in" gap="0.12in">
+    <text size="26pt" color="accent1" h="0.5in">Alinma Overview</text>
+    <line color="D0D0CE" width="0.75pt"/>
+    <text size="13pt" bold="true" color="dk1">The youngest bank in KSA</text>
+
+    <grid cols="12" gap="0.16in" h="3.45in">
+      <stack col="1" colspan="6" gap="0.08in">
+        <text align="ctr" bold="true" size="11pt" color="dk1">Financial Position</text>
+        <stack line="9FC4C8" lineWidth="1pt" pad="0.1in" h="1.3in">
+          <grid cols="3" gap="0.08in">
+            <stack gap="0.02in">
+              <text align="ctr" bold="true" size="10pt" color="dk1">Net Profit Margin</text>
+              <text align="ctr" bold="true" size="15pt" color="accent1">#3 in KSA</text>
+              <text align="ctr" size="8.5pt" color="dk2">3.81% (4Q 2023)</text>
+            </stack>
+            <stack gap="0.02in">
+              <text align="ctr" bold="true" size="10pt" color="dk1">ROE</text>
+              <text align="ctr" bold="true" size="15pt" color="accent1">#2 in KSA</text>
+              <text align="ctr" size="8.5pt" color="dk2">17.22% (4Q 2023)</text>
+            </stack>
+            <stack gap="0.02in">
+              <text align="ctr" bold="true" size="10pt" color="dk1">ROA</text>
+              <text align="ctr" bold="true" size="15pt" color="accent1">#1 in KSA</text>
+              <text align="ctr" size="8.5pt" color="dk2">2.21% (4Q 2023)</text>
+            </stack>
+          </grid>
+        </stack>
+        <text align="ctr" bold="true" size="11pt" color="dk1">Rating Strength</text>
+        <stack line="9FC4C8" lineWidth="1pt" pad="0.1in" h="1.15in">
+          <grid cols="2" gap="0.08in">
+            <stack gap="0.02in">
+              <text align="ctr" bold="true" size="10pt" color="dk1">Fitch</text>
+              <text align="ctr" bold="true" size="15pt" color="accent1">A-</text>
+              <text align="ctr" size="8.5pt" color="dk2">Stable</text>
+            </stack>
+            <stack gap="0.02in">
+              <text align="ctr" bold="true" size="10pt" color="dk1">Moody's</text>
+              <text align="ctr" bold="true" size="15pt" color="accent1">A3</text>
+              <text align="ctr" size="8.5pt" color="dk2">Positive</text>
+            </stack>
+          </grid>
+        </stack>
+      </stack>
+
+      <stack col="7" colspan="2" gap="0.08in">
+        <text align="ctr" bold="true" size="11pt" color="dk1">Retail Digital Snapshot</text>
+        <stack line="9FC4C8" lineWidth="1pt" pad="0.14in" gap="0.22in" h="2.95in" justify="ctr">
+          <stack gap="0.02in">
+            <text align="ctr" bold="true" size="15pt" color="accent1">21m</text>
+            <text align="ctr" size="8.5pt" color="dk2">Monthly Average Users</text>
+          </stack>
+          <stack gap="0.02in">
+            <text align="ctr" bold="true" size="15pt" color="accent1">693K</text>
+            <text align="ctr" size="8.5pt" color="dk2">Daily Average Users</text>
+          </stack>
+          <stack gap="0.02in">
+            <text align="ctr" bold="true" size="15pt" color="accent1">98.5%</text>
+            <text align="ctr" size="8.5pt" color="dk2">Digital Transactions</text>
+          </stack>
+        </stack>
+      </stack>
+
+      <stack col="9" colspan="3" gap="0.08in">
+        <text align="ctr" bold="true" size="11pt" color="dk1">KSA Market Share</text>
+        <grid cols="2" gap="0.1in">
+          <stack line="9FC4C8" lineWidth="1pt" pad="0.08in" gap="0.02in">
+            <text bold="true" size="15pt" color="accent1">6.4%</text>
+            <text size="8.5pt" color="dk2">Assets (4Q 2023)</text>
+          </stack>
+          <stack line="9FC4C8" lineWidth="1pt" pad="0.08in" gap="0.02in">
+            <text bold="true" size="15pt" color="accent1">7.1%</text>
+            <text size="8.5pt" color="dk2">Financing (4Q 2023)</text>
+          </stack>
+          <stack line="9FC4C8" lineWidth="1pt" pad="0.08in" gap="0.02in">
+            <text bold="true" size="15pt" color="accent1">7.6%</text>
+            <text size="8.5pt" color="dk2">Deposits (4Q 2023)</text>
+          </stack>
+          <stack line="9FC4C8" lineWidth="1pt" pad="0.08in" gap="0.02in">
+            <text bold="true" size="15pt" color="accent1">5.5%</text>
+            <text size="8.5pt" color="dk2">NIB Deposits (4Q 2023)</text>
+          </stack>
+        </grid>
+      </stack>
+
+      <image col="12" src="samples/assets/alinma_brand_panel.png" fit="contain"/>
+    </grid>
+
+    <text align="ctr" bold="true" size="11pt" color="dk1">Stock Highlights</text>
+    <stack line="9FC4C8" lineWidth="1pt" pad="0.1in" h="0.95in">
+      <grid cols="5" gap="0.08in">
+        <stack gap="0.02in">
+          <text align="ctr" bold="true" size="14pt" color="accent1">266mn</text>
+          <text align="ctr" size="8.5pt" color="dk2">Volume Traded (1Q 2024)</text>
+        </stack>
+        <stack gap="0.02in">
+          <text align="ctr" bold="true" size="14pt" color="accent1">SAR 11bn</text>
+          <text align="ctr" size="8.5pt" color="dk2">Value Traded (1Q 2024)</text>
+        </stack>
+        <stack gap="0.02in">
+          <text align="ctr" bold="true" size="14pt" color="accent1">SAR 85.1bn</text>
+          <text align="ctr" size="8.5pt" color="dk2">Market Capitalization</text>
+        </stack>
+        <stack gap="0.02in">
+          <text align="ctr" bold="true" size="14pt" color="accent1">16.1%</text>
+          <text align="ctr" size="8.5pt" color="dk2">Foreign Ownership</text>
+        </stack>
+        <stack gap="0.02in">
+          <text align="ctr" bold="true" size="14pt" color="accent1">10%</text>
+          <text align="ctr" size="8.5pt" color="dk2">Owned by PIF</text>
+        </stack>
+      </grid>
+    </stack>
+    <text size="8pt" color="dk2">SOURCE: Bank Financial Statements, Tadawul</text>
+
+    <stack dir="h" anchor="bottom" h="0.26in" pad="0.05in">
+      <text size="8pt" color="dk2">1Q 2024 INVESTOR PRESENTATION</text>
+      <text size="8pt" color="dk2" align="r">5/48</text>
+    </stack>
+  </slide>
+</deck>
