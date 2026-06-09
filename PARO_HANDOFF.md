@@ -243,8 +243,12 @@ If one fails, read *why it exists* before "fixing" it.
    test whether scaffolding generalizes.
 4. **Render-and-critique loop** — agent renders, self-assesses against specs as rubric, loops.
 5. **Font embedding** — deferred until a brand-font case forces it.
-6. **Design-system / template ingestion** — registry seams confirmed ready; ingestor not built
-   (build-for-one: wait for a real forcing case; do NOT build the OOXML parser speculatively).
+6. **Design-system / template ingestion** — **Tier 0/1 BUILT (commit b58fbf3)**: `ingestion/`
+   extracts a lossless theme bundle (colors/fonts/slide size/background/master text styles,
+   provenance + coverage per INGESTION_SPEC.md) and `transpile_deck(..., themes=...)` injects it.
+   Proven against the Deloitte template end-to-end (untracked; tests skip without it). Deferred,
+   recorded in the spec: layout mapping (Tier 3/agent), gradient/image backgrounds, multi-master
+   variants, Tier 2 inference from sample slides.
 
 ## Working method that made this affordable
 
