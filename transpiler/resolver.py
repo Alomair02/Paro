@@ -37,6 +37,16 @@ class LayoutResolver:
     DEFAULT_GAP = "0.2in"
     FONT_DRIFT_THRESHOLD_PT = 4.0
 
+    # Default type-scale role for text bound to a layout placeholder. Without
+    # this, placeholder text fell back to the "body" role and a title
+    # placeholder was emitted at body size — the flat-deck footgun.
+    PLACEHOLDER_DEFAULT_ROLES = {
+        "title": "title",
+        "ctrTitle": "title",
+        "subTitle": "subheading",
+        "body": "body",
+    }
+
     def __init__(
         self,
         theme_registry: ThemeRegistry | None = None,
@@ -1231,7 +1241,9 @@ class LayoutResolver:
     def _paragraph_from_node(self, paragraph: Node, text_parent: Node) -> dict[str, Any]:
         inherited_list = text_parent.attrs.get("list")
         level = int(paragraph.attrs.get("level", 0))
-        role = paragraph.attrs.get("role", text_parent.attrs.get("role", "body"))
+        role = paragraph.attrs.get("role", text_parent.attrs.get("role"))
+        if role is None:
+            role = self._default_role_for_placeholder(text_parent.attrs.get("placeholder"))
         role_bundle = self._type_scale(role)
         runs = self._runs_from_paragraph(
             paragraph,
@@ -1380,6 +1392,12 @@ class LayoutResolver:
         if len(candidates) > 1:
             raise ValueError(f"Placeholder '{placeholder}' is ambiguous; add idx")
         return candidates[0]
+
+    def _default_role_for_placeholder(self, placeholder: str | None) -> str:
+        if not placeholder:
+            return "body"
+        normalized = self._normalize_placeholder(placeholder)
+        return self.PLACEHOLDER_DEFAULT_ROLES.get(normalized, "body")
 
     def _normalize_placeholder(self, placeholder: str) -> str:
         aliases = {

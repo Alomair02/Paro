@@ -1163,7 +1163,48 @@ class EngineHardeningTests(unittest.TestCase):
         )
         self.assertEqual(_inline_theme_map(ast)['t']['colors']['accent1'], '2563EB')
 
-    
+    # #5 — placeholder text must run the type scale, not fall back to "body".
+
+    def _first_paragraph(self, xml: str):
+        resolved = parse_resolve(xml)
+        return resolved.slides[0].slide_data["shapes"][0]["paragraphs"][0]
+
+    def test_placeholder_title_styled_like_role_title(self):  # #5
+        ph = self._first_paragraph(
+            '<deck><slide layout="titleBody">'
+            '<text placeholder="title">T</text></slide></deck>'
+        )
+        role = self._first_paragraph(
+            '<deck><slide layout="titleBody">'
+            '<text role="title">T</text></slide></deck>'
+        )
+        self.assertEqual(ph["role"], "title")
+        self.assertEqual(ph["runs"], role["runs"])
+        body_size = REFERENCE["default_theme"]["typeScale"]["body"]["size"]
+        self.assertNotEqual(ph["runs"][0]["size_pt"], float(body_size))
+
+    def test_placeholder_subtitle_defaults_to_subheading(self):  # #5
+        para = self._first_paragraph(
+            '<deck><slide layout="title">'
+            '<text placeholder="subTitle">S</text></slide></deck>'
+        )
+        self.assertEqual(para["role"], "subheading")
+
+    def test_explicit_role_overrides_placeholder_default(self):  # #5
+        para = self._first_paragraph(
+            '<deck><slide layout="titleBody">'
+            '<text placeholder="body" role="heading">H</text></slide></deck>'
+        )
+        self.assertEqual(para["role"], "heading")
+        heading_size = REFERENCE["default_theme"]["typeScale"]["heading"]["size"]
+        self.assertEqual(para["runs"][0]["size_pt"], float(heading_size))
+
+    def test_plain_text_box_still_defaults_to_body(self):  # #5 must-not-over-tighten
+        para = self._first_paragraph(
+            '<deck><slide layout="blank" flow="stack"><text>x</text></slide></deck>'
+        )
+        self.assertEqual(para["role"], "body")
+
 
 if __name__ == "__main__":
     unittest.main()

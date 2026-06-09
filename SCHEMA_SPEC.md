@@ -51,7 +51,7 @@ Each registered theme carries a `typeScale` map. The v1 roles are `title`, `head
 }
 ```
 
-`size` and `minSize` are in points, `weight` is `normal` or `bold`, and spacing values are optional. Authors select hierarchy with `role` on `<text>` or `<p>`; the resolver looks up the role through `ThemeRegistry.get(deck.theme)["typeScale"]`. Default role when omitted is `body`. `minSize` is the lower bound for optional validator-driven auto-shrink; it is not a second role and does not let text cross into a smaller role's visual territory.
+`size` and `minSize` are in points, `weight` is `normal` or `bold`, and spacing values are optional. Authors select hierarchy with `role` on `<text>` or `<p>`; the resolver looks up the role through `ThemeRegistry.get(deck.theme)["typeScale"]`. Default role when omitted is `body` — **except** for text bound to a layout placeholder, where the default derives from the placeholder type (`title`/`ctrTitle` → `title`, `subTitle` → `subheading`, `body` → `body`). The type scale therefore always runs: `<text placeholder="title">` and `<text role="title">` produce identically styled text, and an explicit `role` on placeholder text overrides the derived default. `minSize` is the lower bound for optional validator-driven auto-shrink; it is not a second role and does not let text cross into a smaller role's visual territory.
 
 ### The layout strategies
 Every container is one of three:
@@ -203,7 +203,7 @@ A text block. Contains paragraphs. Block-level attributes set defaults for all p
 | `idx` | integer | none | **New.** Disambiguates when a layout has multiple placeholders of the same type. Required when ambiguous. |
 | `font` | family | inherit | |
 | `size` | unit (pt) | inherit | Escape hatch for deliberate one-off emphasis; prefer `role` for hierarchy |
-| `role` | `title`, `heading`, `subheading`, `body`, `bodySmall`, `caption` | `body` | Semantic type role resolved through the active theme's `typeScale`; preferred over `size` |
+| `role` | `title`, `heading`, `subheading`, `body`, `bodySmall`, `caption` | `body`, or derived from `placeholder` | Semantic type role resolved through the active theme's `typeScale`; preferred over `size`. When `placeholder` is set the default derives from the placeholder type, so placeholder text is never flat. |
 | `color` | token / hex | inherit | |
 | `align` | `l`, `ctr`, `r`, `just` | inherit | |
 | `bold`, `italic`, `underline` | boolean | false | **Whole-block formatting goes here, not in a wrapping `<run>`** (blessed form) |
