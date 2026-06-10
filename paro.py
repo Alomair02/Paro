@@ -21,8 +21,18 @@ from pathlib import Path
 
 
 def _print_issues(issues) -> None:
+    seen: dict[str, int] = {}
+    ordered: list = []
     for issue in issues:
-        print(f"  [{issue.severity}] {issue.code}: {issue.message}")
+        key = f"{issue.severity}|{issue.code}|{issue.message}"
+        if key in seen:
+            seen[key] += 1
+        else:
+            seen[key] = 1
+            ordered.append((key, issue))
+    for key, issue in ordered:
+        count = f" (x{seen[key]})" if seen[key] > 1 else ""
+        print(f"  [{issue.severity}] {issue.code}: {issue.message}{count}")
 
 
 def run_build(
