@@ -1,0 +1,61 @@
+<deck size="16:9" background="#F1F2F4">
+  <!-- Replication probe: PLSFIX funnel framework slide, raw primitives only.
+       Every coordinate below is hand math; a <funnel> Tier-1 composite would
+       compute all of it. Pain points hit while authoring:
+       - no flipV and no adj exposure on presets -> trapezoid must be rot=180,
+         which would flip its text, so every % label is a separate overlay
+       - h-stacks split equally, so icon+subtitle rows can't flow; the whole
+         right column is absolutely positioned -->
+  <slide layout="blank" flow="free">
+
+    <!-- funnel bands (wide-at-top = trapezoid rotated 180) -->
+    <shape geom="trapezoid" rot="180" x="0.30in" y="1.25in" w="4.6in" h="0.92in" fill="#3D52F3" line="none"/>
+    <shape geom="trapezoid" rot="180" x="0.65in" y="2.27in" w="3.9in" h="0.92in" fill="#121212" line="none"/>
+    <shape geom="trapezoid" rot="180" x="1.00in" y="3.29in" w="3.2in" h="0.92in" fill="#9CA0A6" line="none"/>
+    <shape geom="trapezoid" rot="180" x="1.35in" y="4.31in" w="2.5in" h="0.92in" fill="#E7E9EC" line="none"/>
+    <shape geom="triangle"  rot="180" x="1.75in" y="5.33in" w="1.7in" h="0.92in" fill="#74A7D8" line="none"/>
+
+    <!-- % labels overlaid because the bands are rotated -->
+    <text x="1.6in" y="1.51in" w="2in" h="0.4in" align="ctr" bold="true" size="13pt" color="FFFFFF">90%</text>
+    <text x="1.6in" y="2.53in" w="2in" h="0.4in" align="ctr" bold="true" size="13pt" color="FFFFFF">80%</text>
+    <text x="1.6in" y="3.55in" w="2in" h="0.4in" align="ctr" bold="true" size="13pt" color="FFFFFF">70%</text>
+    <text x="1.6in" y="4.57in" w="2in" h="0.4in" align="ctr" bold="true" size="13pt" color="#C3C7CD">60%</text>
+    <text x="1.6in" y="5.40in" w="2in" h="0.4in" align="ctr" bold="true" size="13pt" color="FFFFFF">50%</text>
+
+    <!-- annotation block 1 -->
+    <shape geom="roundRect" radius="0.07in" x="5.70in" y="1.40in" w="0.34in" h="0.34in" fill="#15181D" line="none">
+      <text align="ctr" size="11pt" color="FFFFFF">&#10141;</text>
+    </shape>
+    <text x="6.20in" y="1.38in" w="2.9in" h="0.35in" bold="true" size="12pt" color="#15181D">Subtitle in Here</text>
+    <text x="6.20in" y="1.74in" w="2.9in" h="0.95in" size="10pt" color="#8A8E96" lineSpacing="1.15">Lorem ipsum dolor sit amet, adipiscing elit. Aenean commodo ligula eget dolor.</text>
+
+    <!-- annotation block 2 -->
+    <shape geom="roundRect" radius="0.07in" x="9.55in" y="1.40in" w="0.34in" h="0.34in" fill="#15181D" line="none">
+      <text align="ctr" size="11pt" color="FFFFFF">&#10141;</text>
+    </shape>
+    <text x="10.05in" y="1.38in" w="2.9in" h="0.35in" bold="true" size="12pt" color="#15181D">Subtitle in Here</text>
+    <text x="10.05in" y="1.74in" w="2.9in" h="0.95in" size="10pt" color="#8A8E96" lineSpacing="1.15">Lorem ipsum dolor sit amet, adipiscing elit. Aenean commodo ligula eget dolor.</text>
+
+    <!-- annotation block 3 -->
+    <shape geom="roundRect" radius="0.07in" x="5.70in" y="3.05in" w="0.34in" h="0.34in" fill="#15181D" line="none">
+      <text align="ctr" size="11pt" color="FFFFFF">&#10141;</text>
+    </shape>
+    <text x="6.20in" y="3.03in" w="2.9in" h="0.35in" bold="true" size="12pt" color="#15181D">Subtitle in Here</text>
+    <text x="6.20in" y="3.39in" w="2.9in" h="0.95in" size="10pt" color="#8A8E96" lineSpacing="1.15">Lorem ipsum dolor sit amet, adipiscing elit. Aenean commodo ligula eget dolor.</text>
+
+    <!-- annotation block 4 -->
+    <shape geom="roundRect" radius="0.07in" x="9.55in" y="3.05in" w="0.34in" h="0.34in" fill="#15181D" line="none">
+      <text align="ctr" size="11pt" color="FFFFFF">&#10141;</text>
+    </shape>
+    <text x="10.05in" y="3.03in" w="2.9in" h="0.35in" bold="true" size="12pt" color="#15181D">Subtitle in Here</text>
+    <text x="10.05in" y="3.39in" w="2.9in" h="0.95in" size="10pt" color="#8A8E96" lineSpacing="1.15">Lorem ipsum dolor sit amet, adipiscing elit. Aenean commodo ligula eget dolor.</text>
+
+    <!-- annotation block 5 -->
+    <shape geom="roundRect" radius="0.07in" x="5.70in" y="4.70in" w="0.34in" h="0.34in" fill="#15181D" line="none">
+      <text align="ctr" size="11pt" color="FFFFFF">&#10141;</text>
+    </shape>
+    <text x="6.20in" y="4.68in" w="2.9in" h="0.35in" bold="true" size="12pt" color="#15181D">Subtitle in Here</text>
+    <text x="6.20in" y="5.04in" w="2.9in" h="0.95in" size="10pt" color="#8A8E96" lineSpacing="1.15">Lorem ipsum dolor sit amet, adipiscing elit. Aenean commodo ligula eget dolor.</text>
+
+  </slide>
+</deck>
