@@ -88,6 +88,11 @@ ALLOWED_ATTRS = {
         "lineWidth",
         "radius",
         "text",
+        "flipH",
+        "flipV",
+        "adj",
+        "alpha",
+        "shadow",
     }
     | GRID_PLACEMENT_ATTRS
     | GEOMETRY_ATTRS,

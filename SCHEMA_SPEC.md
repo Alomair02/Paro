@@ -266,6 +266,10 @@ Content: the text string.
 | `radius` | unit | `0` | Corner radius (roundRect) |
 | `text` | string | none | Shorthand for centered text inside |
 | `w`, `h`, `x`, `y`, `rot` | unit / `%` / deg | from container | Geometry (required in `<free>`) |
+| `flipH`, `flipV` | `true`/`false` | `false` | Mirror the geometry without rotating its text |
+| `adj` | `40%` or `adj1:30%, adj2:12500` | preset default | Preset adjustment guides; `%` → 1000ths, bare numbers raw. Wins over `radius` |
+| `alpha` | `%` | opaque | Fill opacity (`60%` = 60% opaque). Requires a fill |
+| `shadow` | `true`/`false` | `false` | Soft outer shadow (same finish as timeline `soft-shadow`) |
 
 A shape may contain a nested `<text>` for richer text than the `text` shorthand.
 

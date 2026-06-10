@@ -296,6 +296,24 @@ class LayoutResolver:
             }
         if "rot" in node.attrs:
             shape["rotation"] = float(node.attrs["rot"])
+        if self._is_true(node.attrs.get("flipH", "false")):
+            shape["flipH"] = True
+        if self._is_true(node.attrs.get("flipV", "false")):
+            shape["flipV"] = True
+        if "adj" in node.attrs:
+            shape["adjustments"] = self._parse_adjustments(node.attrs["adj"])
+        if "alpha" in node.attrs:
+            if shape["fill"] == "none":
+                raise ValueError("Shape alpha requires a fill")
+            shape["fill_style"] = {
+                "type": "solid",
+                "color": shape["fill"],
+                "transforms": {"alpha": self._percent_thousandths(node.attrs["alpha"])},
+            }
+        if self._is_true(node.attrs.get("shadow", "false")):
+            shape["effects"] = {
+                "shadow": {"blur": "2.5pt", "dist": "1pt", "dir": 2700000, "alpha": 14000}
+            }
         text_node = next((child for child in node.children if child.kind == "text"), None)
         if text_node:
             shape["paragraphs"] = self._paragraphs_from_text_node(text_node)
@@ -1628,6 +1646,26 @@ class LayoutResolver:
         if fill in (None, "none"):
             return "none"
         return fill
+
+    def _parse_adjustments(self, raw: str) -> dict[str, int]:
+        """Parse adj="40%" or adj="adj1:40%, adj2:25000" into a guide dict."""
+        adjustments: dict[str, int] = {}
+        for token in raw.replace(",", " ").split():
+            if ":" in token:
+                name, value = token.split(":", 1)
+            else:
+                name, value = "adj", token
+            adjustments[name.strip()] = self._percent_thousandths(value)
+        if not adjustments:
+            raise ValueError(f"Empty adj value: {raw!r}")
+        return adjustments
+
+    def _percent_thousandths(self, raw: str) -> int:
+        """"40%" -> 40000; bare numbers pass through as raw OOXML units."""
+        raw = str(raw).strip()
+        if raw.endswith("%"):
+            return round(float(raw[:-1]) * 1000)
+        return int(raw)
 
     def _resolve_image_attrs(self, attrs: dict[str, str]) -> dict[str, str]:
         src = attrs["src"]

@@ -551,7 +551,15 @@ def _has_text(shape_data: dict) -> bool:
 
 def _xfrm_from_shape(shape_data: dict) -> etree._Element:
     x, y, cx, cy = _geometry_from_shape(shape_data)
-    return make_xfrm(x, y, cx, cy, _rotation_from_shape(shape_data))
+    return make_xfrm(
+        x,
+        y,
+        cx,
+        cy,
+        _rotation_from_shape(shape_data),
+        flip_h=bool(shape_data.get("flipH")),
+        flip_v=bool(shape_data.get("flipV")),
+    )
 
 
 def _prst_geom_from_shape(shape_data: dict) -> etree._Element:
@@ -562,6 +570,8 @@ def _prst_geom_from_shape(shape_data: dict) -> etree._Element:
         radius = _to_emu(shape_data["radius"])
         shortest = max(1, min(width, height))
         adjustments["adj"] = max(0, min(50000, round(radius / shortest * 100000)))
+    # Explicit adj guides are the author's exact intent; they win over radius.
+    adjustments.update(shape_data.get("adjustments") or {})
     return make_prst_geom(preset, adjustments)
 
 

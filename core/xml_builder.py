@@ -134,7 +134,7 @@ _SCHEME_TOKENS = {
     "tx1", "tx2", "phClr",
 }
 
-_PERCENT_COLOR_TRANSFORMS = {"lumMod", "lumOff"}
+_PERCENT_COLOR_TRANSFORMS = {"lumMod", "lumOff", "alpha"}
 
 
 def make_solid_fill(color: str, transforms: dict[str, int] = None) -> etree._Element:

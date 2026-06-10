@@ -1333,5 +1333,82 @@ class StackContentSizingTests(unittest.TestCase):
         self.assertEqual(first["w"], second["w"])
 
 
+class ShapeUnlockTests(unittest.TestCase):
+    """flipH/flipV, adj guides, fill alpha, and shadow on <shape>."""
+
+    def _slide_xml(self, body: str) -> str:
+        deck = parse_resolve(
+            f"""
+            <deck>
+              <slide layout="blank" flow="free">
+                {body}
+              </slide>
+            </deck>
+            """
+        )
+        return SlideBuilder(
+            ContentTypeRegistry(),
+            RelationshipRegistry(),
+            {},
+        ).build(deck.slide_data[0], part_path="ppt/slides/slide1.xml")
+
+    def test_flip_attrs_emit_xfrm_flips(self):
+        slide_xml = self._slide_xml(
+            '<shape geom="trapezoid" flipV="true" x="1in" y="1in" w="2in" h="1in" fill="accent1"/>'
+        )
+        self.assertIn('flipV="1"', slide_xml)
+        self.assertNotIn('flipH="1"', slide_xml)
+
+        slide_xml = self._slide_xml(
+            '<shape geom="trapezoid" flipH="true" x="1in" y="1in" w="2in" h="1in" fill="accent1"/>'
+        )
+        self.assertIn('flipH="1"', slide_xml)
+        self.assertNotIn('flipV="1"', slide_xml)
+
+    def test_adj_single_percent_value(self):
+        slide_xml = self._slide_xml(
+            '<shape geom="trapezoid" adj="40%" x="1in" y="1in" w="2in" h="1in" fill="accent1"/>'
+        )
+        self.assertIn('name="adj" fmla="val 40000"', slide_xml)
+
+    def test_adj_named_values_percent_and_raw(self):
+        slide_xml = self._slide_xml(
+            '<shape geom="parallelogram" adj="adj1:30%, adj2:12500"'
+            ' x="1in" y="1in" w="2in" h="1in" fill="accent1"/>'
+        )
+        self.assertIn('name="adj1" fmla="val 30000"', slide_xml)
+        self.assertIn('name="adj2" fmla="val 12500"', slide_xml)
+
+    def test_alpha_emits_solid_fill_alpha_transform(self):
+        slide_xml = self._slide_xml(
+            '<shape alpha="60%" x="1in" y="1in" w="2in" h="1in" fill="3D52F3"/>'
+        )
+        tree = parse_xml(slide_xml)
+        alphas = tree.findall(f".//{qn('a', 'solidFill')}/{qn('a', 'srgbClr')}/{qn('a', 'alpha')}")
+        self.assertEqual(len(alphas), 1)
+        self.assertEqual(alphas[0].get("val"), "60000")
+
+    def test_alpha_on_unfilled_shape_raises(self):
+        with self.assertRaises(ValueError):
+            parse_resolve(
+                """
+                <deck>
+                  <slide layout="blank" flow="free">
+                    <shape alpha="60%" x="1in" y="1in" w="2in" h="1in" fill="none"/>
+                  </slide>
+                </deck>
+                """
+            )
+
+    def test_shadow_true_emits_outer_shadow(self):
+        slide_xml = self._slide_xml(
+            '<shape shadow="true" x="1in" y="1in" w="2in" h="1in" fill="accent1"/>'
+        )
+        self.assertIn("outerShdw", slide_xml)
+
+        slide_xml = self._slide_xml('<shape x="1in" y="1in" w="2in" h="1in" fill="accent1"/>')
+        self.assertNotIn("outerShdw", slide_xml)
+
+
 if __name__ == "__main__":
     unittest.main()
