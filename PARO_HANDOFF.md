@@ -225,6 +225,28 @@ If one fails, read *why it exists* before "fixing" it.
 - **Two-sources-of-truth drift** — ENGINE_REFERENCE documented 6 layouts, `LAYOUT_DEFINITIONS` had
   4. Consider deriving the registry from the reference to prevent recurrence.
 
+## Pre-agent phases — DONE 2026-06-10 (commits c2a3cf0..de180ee, suite 176)
+
+The three-phase plan to finish the lower layers before the agent layer, executed:
+
+- **Phase 1 — primitive unlocks**: `<shape>` flipH/flipV/`adj`/`alpha`/`shadow`; `<line>`
+  head/tail end markers; `<image>` duotone/grayscale/alpha (the brand photo wash);
+  `<run field="slidenum">` true `a:fld`. All thin DSL exposures over existing engine plumbing.
+- **Phase 2 — Tier-1 diagram composites**: `<funnel>` `<process>` `<pyramid>` `<venn>`,
+  one resolver function each (the `<timeline>` pattern). Funnel/pyramid compute true cones
+  via trapezoid `adj`. TRAP: LibreOffice mirrors text inside flipped shapes (PowerPoint
+  doesn't) — composites emit labels as unflipped overlays. `<statcard>` deliberately skipped:
+  styled stacks + `justify="ctr"` already express it (see AGENT_GUIDE pattern).
+- **Phase 3 — guardrails**: design lint in the validator (`lint_tiny_text`, `lint_size_sprawl`,
+  `lint_font_sprawl`, `lint_edge`) + fixed a latent bug where `_validate_text_fit` ran on only
+  the last block per slide; `paro.py build deck.xml --png [--theme corp.pptx]` one-command
+  loop; `AGENT_GUIDE.md` (authoring doctrine + worked-example corpus index over samples/).
+- **Gate check** (replicate never-seen Alinma p.23 P&L Trends cold, per guide, no engine
+  changes): PASSED structurally in 3 render iterations vs the 2 targeted. The extra iteration
+  has two named causes, now backlog: (a) `<table>` has no text-size control — cells were
+  hand-wrapped in `<p role="caption">` ×54; (b) intrinsic text measurement ignores bullet
+  indents, so bulleted paragraphs under-measure and need explicit `h=` bands.
+
 ## Roadmap (priority order)
 
 1. **Probe-finding fixes (design judgment) — the bridge to the agent layer.** In priority of
