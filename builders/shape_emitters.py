@@ -358,6 +358,8 @@ def emit_line(shape_data: dict, slide_state: SlideState) -> etree._Element:
             shape_data.get("color", "dk1"),
             dash=_dash_value(shape_data.get("dash", "solid")),
             cap=_cap_value(shape_data.get("cap", "flat")),
+            head=shape_data.get("head"),
+            tail=shape_data.get("tail"),
         )
     )
     return cxn_sp

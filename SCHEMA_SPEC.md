@@ -283,6 +283,7 @@ A straight line / connector — needed for timelines, separators, and rules. Bot
 | `dash` | `solid`, `dot`, `dash`, `dashDot` | `solid` | Dash style |
 | `x1`, `y1`, `x2`, `y2` | unit / `%` | required in `<free>` | Endpoints |
 | `cap` | `flat`, `round`, `square` | `flat` | End cap |
+| `head`, `tail` | `triangle`, `stealth`, `diamond`, `oval`, `arrow`, `none` | `none` | End markers; `head` = the (x1,y1) end. For leader lines: `head="oval"` |
 
 In a `<stack>`/`<grid>`, a `<line>` spans the cell it occupies (a horizontal rule fills the cell width).
 

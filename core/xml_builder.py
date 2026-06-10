@@ -225,11 +225,14 @@ def make_ln(
     dash: str = None,
     cap: str = None,
     color_transforms: dict[str, int] = None,
+    head: str = None,
+    tail: str = None,
 ) -> etree._Element:
     """
     Build an a:ln element.
     width_emu = 0 → no line (a:noFill inside).
     color follows the same rules as make_solid_fill.
+    head/tail are line-end marker types (triangle, stealth, diamond, oval, arrow).
     """
     ln = etree.Element(qn("a", "ln"))
     if cap:
@@ -240,6 +243,12 @@ def make_ln(
         if dash and dash != "solid":
             prst_dash = etree.SubElement(ln, qn("a", "prstDash"))
             prst_dash.set("val", dash)
+        for tag, kind in (("headEnd", head), ("tailEnd", tail)):
+            if kind and kind != "none":
+                end = etree.SubElement(ln, qn("a", tag))
+                end.set("type", kind)
+                end.set("w", "med")
+                end.set("len", "med")
     else:
         ln.append(make_no_fill())
     return ln

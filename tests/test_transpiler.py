@@ -1400,6 +1400,29 @@ class ShapeUnlockTests(unittest.TestCase):
                 """
             )
 
+    def test_line_end_markers_emit_head_and_tail(self):
+        slide_xml = self._slide_xml(
+            '<line x1="1in" y1="1in" x2="3in" y2="2in" head="oval" tail="arrow"/>'
+        )
+        self.assertIn('headEnd type="oval"', slide_xml.replace("a:", ""))
+        self.assertIn('tailEnd type="arrow"', slide_xml.replace("a:", ""))
+
+        slide_xml = self._slide_xml('<line x1="1in" y1="1in" x2="3in" y2="2in"/>')
+        self.assertNotIn("headEnd", slide_xml)
+        self.assertNotIn("tailEnd", slide_xml)
+
+    def test_line_unknown_marker_raises(self):
+        with self.assertRaises(ValueError):
+            parse_resolve(
+                """
+                <deck>
+                  <slide layout="blank" flow="free">
+                    <line x1="1in" y1="1in" x2="3in" y2="2in" head="harpoon"/>
+                  </slide>
+                </deck>
+                """
+            )
+
     def test_shadow_true_emits_outer_shadow(self):
         slide_xml = self._slide_xml(
             '<shape shadow="true" x="1in" y="1in" w="2in" h="1in" fill="accent1"/>'

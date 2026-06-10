@@ -47,6 +47,9 @@ class LayoutResolver:
         "body": "body",
     }
 
+    # Valid a:headEnd/a:tailEnd marker types for <line head=/tail=>.
+    LINE_END_TYPES = frozenset({"none", "triangle", "stealth", "diamond", "oval", "arrow"})
+
     def __init__(
         self,
         theme_registry: ThemeRegistry | None = None,
@@ -346,6 +349,14 @@ class LayoutResolver:
             "dash": node.attrs.get("dash", "solid"),
             "cap": node.attrs.get("cap", "flat"),
         }
+        for end in ("head", "tail"):
+            if end in node.attrs:
+                kind = node.attrs[end]
+                if kind not in self.LINE_END_TYPES:
+                    raise ValueError(
+                        f"Unknown line {end} marker {kind!r}; expected one of {sorted(self.LINE_END_TYPES)}"
+                    )
+                shape[end] = kind
         self._append_shape(shape)
         line_box = Box(min(x1, x2), min(y1, y2), abs(x2 - x1), abs(y2 - y1))
         self._record_block("line", line_box, parent_kind, node.attrs)

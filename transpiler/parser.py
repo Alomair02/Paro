@@ -96,7 +96,7 @@ ALLOWED_ATTRS = {
     }
     | GRID_PLACEMENT_ATTRS
     | GEOMETRY_ATTRS,
-    "line": {"color", "width", "dash", "x1", "y1", "x2", "y2", "cap"}
+    "line": {"color", "width", "dash", "x1", "y1", "x2", "y2", "cap", "head", "tail"}
     | GRID_PLACEMENT_ATTRS
     | GEOMETRY_ATTRS,
     "table": {
