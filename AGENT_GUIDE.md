@@ -157,9 +157,12 @@ fonts, and a type scale derived from its master — exactly, no inference. An in
 outranks the template. Write new decks with theme tokens and they inherit whatever
 template the user supplies.
 
-**What ingestion does NOT yet consume: the template's slide layouts.** Placeholders
-(`layout="title"`, `ctrTitle`, `subTitle`…) resolve against Paro's own generic layouts,
-not the template's designed ones — a placeholder-based cover comes out plain, not
-branded. For covers and section dividers on an ingested theme, **compose explicitly**
-(`layout="blank"` + theme-token shapes/text, e.g. an `accent1` band or `lt2` panel)
-instead of trusting placeholders to carry the template's art.
+**Layout transplant: the template's designed layouts come along.** When a template is
+supplied, its slideMaster/slideLayouts travel verbatim into the package and DSL layout
+names map onto them — `layout="title"` gets the template's actual cover art,
+`layout="divider"` its section break, plus `titleOnly`/`titleBody`/`twoContent`/
+`picture`/`blank`. **On an ingested theme, prefer placeholder-based covers and
+dividers** (`<text placeholder="title">` etc.) — that is what makes the output
+indistinguishable from the company's own deck. `title` and `ctrTitle` both match
+whichever the template's cover declares. Compose explicitly only for layouts the
+template doesn't offer.

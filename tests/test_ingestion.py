@@ -160,3 +160,72 @@ class ExtractionErrorTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+@unittest.skipUnless(DELOITTE.exists(), "Deloitte template not present")
+class LayoutTransplantTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        from ingestion import extract_layout_transplant
+
+        cls.transplant = extract_layout_transplant(DELOITTE)
+
+    def test_captures_master_theme_layouts_rels_and_media(self):
+        t = self.transplant
+        self.assertIn(t["master_part"], t["parts"])
+        self.assertIn(t["theme_part"], t["parts"])
+        for layout in t["layouts"]:
+            self.assertIn(layout["part_path"], t["parts"])
+        # rels travel with their parts so internal references stay valid
+        self.assertIn("ppt/slideMasters/_rels/slideMaster1.xml.rels", t["parts"])
+        self.assertTrue(any(p.startswith("ppt/media/") for p in t["parts"]))
+
+    def test_name_map_classifies_cover_divider_and_blank(self):
+        name_map = self.transplant["name_map"]
+        by_part = {l["part_path"]: l["name"] for l in self.transplant["layouts"]}
+        self.assertIn("title slide", by_part[name_map["title"]].lower())
+        self.assertIn("divider", by_part[name_map["divider"]].lower())
+        self.assertEqual(by_part[name_map["blank"]], "Blank")
+
+    def test_registry_layouts_carry_real_placeholder_geometry(self):
+        from ingestion import transplant_to_registry_layouts
+
+        registry = transplant_to_registry_layouts(self.transplant)
+        title = registry["title"]
+        types = {p["type"] for p in title["placeholders"]}
+        self.assertIn("title", types)
+        for ph in title["placeholders"]:
+            self.assertIsInstance(ph["off"]["x"], int)
+            self.assertIsInstance(ph["ext"]["cx"], int)
+
+    def test_transplanted_deck_uses_template_master_and_layouts(self):
+        from ingestion import extract_layout_transplant
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            deck = Path(tmpdir) / "deck.xml"
+            deck.write_text(
+                '<deck theme="default" size="16:9">'
+                '<slide layout="title" flow="stack">'
+                '<text placeholder="title">Hello</text>'
+                '<text placeholder="subTitle">World</text>'
+                "</slide>"
+                '<slide layout="divider" flow="stack">'
+                '<text placeholder="title">Part 1</text>'
+                "</slide></deck>"
+            )
+            out = Path(tmpdir) / "deck.pptx"
+            transpile_deck(deck, out, layout_transplant=self.transplant)
+            with ZipFile(out) as z:
+                names = set(z.namelist())
+                self.assertIn(self.transplant["master_part"], names)
+                # template layouts present, Paro's generated master absent only
+                # if paths differ; what matters: slide1 references the mapped
+                # template cover layout
+                slide_rels = z.read("ppt/slides/_rels/slide1.xml.rels").decode()
+                cover = self.transplant["name_map"]["title"].split("/")[-1]
+                self.assertIn(cover, slide_rels)
+                presentation = z.read("ppt/presentation.xml").decode()
+                self.assertIn("sldMasterId", presentation)
+                content_types = z.read("[Content_Types].xml").decode()
+                self.assertIn("slideMaster+xml", content_types)
+                self.assertIn("slideLayout+xml", content_types)

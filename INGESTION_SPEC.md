@@ -106,11 +106,31 @@ A user-supplied template is ground truth. The extractor's obligations:
   definitions (inline wins; an author's explicit override outranks ingestion).
 - A deck then opts in with `<deck theme="deloitte">`.
 
+## Layout transplant (BUILT — ingestion/layout_extractor.py)
+
+The gap the theme bundle left — placeholder slides resolving against Paro's generic
+layouts — is closed by a second, parallel extraction: `extract_layout_transplant(path)`
+captures the template's slideMaster, slideLayouts, theme part, their `.rels` and
+referenced media **verbatim** (byte-for-byte under original part paths, so internal
+relationships stay valid), plus a parsed placeholder inventory (idx/type/geometry,
+master-inherited when the layout omits xfrm).
+
+- **DSL name mapping**: designed layout names are the primary signal ("Title Slide…" →
+  `title`, "Divider…"/"Section…" → `divider`, "Title Only", "Blank"), placeholder
+  signatures the fallback; covers/dividers never stand in for content layouts. First
+  match in template order wins.
+- **Consumption**: `transpile_deck(..., layout_transplant=...)` swaps the generated
+  theme/master/layouts for the template's, points each slide's layout relationship at
+  the mapped template layout, and gives the resolver/validator the template's real
+  placeholder geometry. `paro.py build --theme` does both extractions automatically.
+- `title`/`ctrTitle` placeholder requests match either declared type — templates differ
+  in which their cover uses, and the author intent is the same.
+
 ## Deferred (recorded so they're deliberate, not forgotten)
 
-- **Layout geometry mapping** (template's 41 layouts → engine layout definitions):
-  needs judgment about which corporate layouts map to which semantic engine layouts —
-  Tier 3 (agent) territory, with layout count reported in coverage meanwhile.
+- **Semantic mapping beyond the heuristics** (which of 41 corporate layouts *best*
+  fits a given slide's content) — Tier 3 (agent) judgment; the name map covers the
+  blessed DSL names today and unmapped names fall back to the template's blank.
 - **Gradient/image master backgrounds** — preserved raw now; needs background-fill
   vocabulary in the deck schema beyond solid/`image:` to consume faithfully.
 - **Multiple slide masters** (dark/light variants) — bundle schema reserves a list;

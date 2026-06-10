@@ -1834,10 +1834,13 @@ class LayoutResolver:
 
     def _resolve_placeholder(self, placeholder: str, idx: str | None) -> dict[str, Any]:
         normalized = self._normalize_placeholder(placeholder)
+        # title and ctrTitle are the same author intent; templates differ in
+        # which one their cover layout declares, so both match either way.
         candidates = [
             ph
             for ph in self._layout["placeholders"]
-            if ph["type"] == normalized or (normalized == "title" and ph["type"] == "ctrTitle")
+            if ph["type"] == normalized
+            or (normalized in ("title", "ctrTitle") and ph["type"] in ("title", "ctrTitle"))
         ]
         if idx is not None:
             for ph in self._layout["placeholders"]:

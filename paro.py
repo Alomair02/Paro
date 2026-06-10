@@ -56,18 +56,26 @@ def run_build(
     output_path = Path(output_path) if output_path else deck_path.with_suffix(".pptx")
 
     themes = None
+    transplant = None
     if theme_pptx:
-        from ingestion import bundle_to_registry_themes, extract_theme_bundle
+        from ingestion import (
+            bundle_to_registry_themes,
+            extract_layout_transplant,
+            extract_theme_bundle,
+        )
 
         bundle = extract_theme_bundle(theme_pptx)
         name = theme_name or Path(theme_pptx).stem
         themes = bundle_to_registry_themes(bundle, name)
+        transplant = extract_layout_transplant(theme_pptx)
         skipped = bundle.get("coverage", {}).get("skipped", [])
         print(f"theme '{name}' ingested from {Path(theme_pptx).name}"
               + (f" ({len(skipped)} blocks skipped — see bundle coverage)" if skipped else ""))
+        mapped = ", ".join(sorted(transplant["name_map"]))
+        print(f"layouts transplanted: {len(transplant['layouts'])} from template (DSL names: {mapped})")
 
     try:
-        result = transpile_deck(deck_path, output_path, themes=themes)
+        result = transpile_deck(deck_path, output_path, themes=themes, layout_transplant=transplant)
     except TranspileValidationError as exc:
         print(f"BUILD FAILED — validation errors in {deck_path.name}:")
         _print_issues(exc.issues)

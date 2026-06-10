@@ -235,7 +235,9 @@ class Validator:
         layout = self.layout_registry.get(layout_name)
         normalized = self._normalize_placeholder(placeholder)
         for ph in layout["placeholders"]:
-            type_matches = ph["type"] == normalized or (normalized == "title" and ph["type"] == "ctrTitle")
+            type_matches = ph["type"] == normalized or (
+                normalized in ("title", "ctrTitle") and ph["type"] in ("title", "ctrTitle")
+            )
             idx_matches = idx is None or str(ph["idx"]) == str(idx)
             if type_matches and idx_matches:
                 return True

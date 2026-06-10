@@ -16,13 +16,50 @@ from core.relationship_reg import RelationshipRegistry
 
 SAMPLE_THEME = deepcopy(REFERENCE["default_theme"])
 
+# Media extensions a transplanted template may carry.
+MEDIA_MIME_TYPES = {
+    "png": "image/png",
+    "jpg": "image/jpeg",
+    "jpeg": "image/jpeg",
+    "gif": "image/gif",
+    "bmp": "image/bmp",
+    "tif": "image/tiff",
+    "tiff": "image/tiff",
+    "svg": "image/svg+xml",
+    "emf": "image/x-emf",
+    "wmf": "image/x-wmf",
+}
+
+
+def _register_transplant_part(part_path: str, content_types: ContentTypeRegistry):
+    if part_path.endswith(".rels"):
+        return  # covered by the package-wide rels default
+    if "/slideLayouts/" in part_path and part_path.endswith(".xml"):
+        content_types.add_override(part_path, ContentTypeRegistry.SLIDE_LAYOUT)
+    elif "/slideMasters/" in part_path and part_path.endswith(".xml"):
+        content_types.add_override(part_path, ContentTypeRegistry.SLIDE_MASTER)
+    elif "/theme/" in part_path and part_path.endswith(".xml"):
+        content_types.add_override(part_path, ContentTypeRegistry.THEME)
+    else:
+        extension = part_path.rsplit(".", 1)[-1].lower()
+        if extension in MEDIA_MIME_TYPES:
+            content_types.add_default(extension, MEDIA_MIME_TYPES[extension])
+
+
 def assemble_package(
     theme: dict,
     slide_data: list[dict],
     output_path,
+    transplant: dict | None = None,
 ) -> dict:
     """Shared package-building sequence: theme -> layouts -> master ->
-    slides -> presentation -> assemble. The single place part-wiring lives."""
+    slides -> presentation -> assemble. The single place part-wiring lives.
+
+    transplant: an ingestion.layout_extractor transplant — the template's
+    theme/master/layouts/media are carried verbatim under their original
+    part paths (so their internal rels stay valid) instead of generating
+    Paro's own. Slides then reference the template's layouts directly via
+    slide_data["layout_part_path"]."""
     content_types = ContentTypeRegistry()
     relationships = RelationshipRegistry()
     parts: dict[str, str | bytes] = {}
@@ -30,20 +67,27 @@ def assemble_package(
     media_sources: dict[str, str] = {}
     chart_parts: dict[str, str | bytes] = {}
 
-    theme_path = package_path("theme", 1)
-    parts[theme_path] = ThemeBuilder(content_types, relationships).build(
-        theme, part_path=theme_path
-    )
+    if transplant:
+        master_path = transplant["master_part"]
+        layout_records = None
+        for part_path, payload in transplant["parts"].items():
+            parts[part_path] = payload
+            _register_transplant_part(part_path, content_types)
+    else:
+        theme_path = package_path("theme", 1)
+        parts[theme_path] = ThemeBuilder(content_types, relationships).build(
+            theme, part_path=theme_path
+        )
 
-    layout_builder = LayoutBuilder(content_types, relationships)
-    for layout_name, layout_def in LAYOUT_DEFINITIONS.items():
-        parts[layout_def["part_path"]] = layout_builder.build(layout_name)
+        layout_builder = LayoutBuilder(content_types, relationships)
+        for layout_name, layout_def in LAYOUT_DEFINITIONS.items():
+            parts[layout_def["part_path"]] = layout_builder.build(layout_name)
 
-    master_path = package_path("slideMaster", 1)
-    layout_records = LayoutBuilder.default_layout_records()
-    parts[master_path] = MasterBuilder(content_types, relationships).build(
-        layout_records, theme_part_path=theme_path, part_path=master_path
-    )
+        master_path = package_path("slideMaster", 1)
+        layout_records = LayoutBuilder.default_layout_records()
+        parts[master_path] = MasterBuilder(content_types, relationships).build(
+            layout_records, theme_part_path=theme_path, part_path=master_path
+        )
 
     slide_builder = SlideBuilder(
         content_types, relationships, media_parts, media_sources, chart_parts

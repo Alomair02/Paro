@@ -53,19 +53,30 @@ def transpile_deck(
     *,
     auto_shrink_text: bool = False,
     themes: dict[str, dict] | None = None,
+    layout_transplant: dict | None = None,
 ) -> TranspileResult:
     """Run parse -> resolve -> validate -> engine -> zip.
 
     themes: extra registry themes (e.g. an ingested template bundle via
     ingestion.bundle_to_registry_themes). An inline <theme> with the same
     name wins — an author's explicit override outranks ingestion.
+
+    layout_transplant: an ingestion.layout_extractor transplant — the
+    template's master/layouts/theme travel verbatim into the package, DSL
+    layout names resolve to the template's designed layouts, and
+    placeholders take the template's real geometry.
     """
     dsl_xml_path = Path(dsl_xml_path)
     ast = DSLParser().parse_file(str(dsl_xml_path))
     output = Path(output_path) if output_path else dsl_xml_path.with_suffix(".pptx")
 
     theme_registry = ThemeRegistry({**(themes or {}), **_inline_theme_map(ast)})
-    layout_registry = LayoutRegistry()
+    if layout_transplant:
+        from ingestion.layout_extractor import transplant_to_registry_layouts
+
+        layout_registry = LayoutRegistry(transplant_to_registry_layouts(layout_transplant))
+    else:
+        layout_registry = LayoutRegistry()
     shape_library = ShapeLibrary()
 
     resolver = LayoutResolver(theme_registry, layout_registry, shape_library)
@@ -74,7 +85,13 @@ def transpile_deck(
     issues = validator.validate(resolved)
     validator.raise_for_errors(issues)
 
-    graph = _build_package(resolved, output)
+    if layout_transplant:
+        name_map = layout_transplant["name_map"]
+        fallback = name_map.get("blank") or layout_transplant["layouts"][0]["part_path"]
+        for slide in resolved.slide_data:
+            slide["layout_part_path"] = name_map.get(slide["layout"], fallback)
+
+    graph = _build_package(resolved, output, layout_transplant)
     return TranspileResult(
         pptx_path=graph["output_path"],
         resolved_deck=resolved,
@@ -116,9 +133,14 @@ def _inline_theme_map(ast: DeckAst) -> dict[str, dict[str, Any]]:
     }
 
 
-def _build_package(resolved: ResolvedDeck, output_path: Path) -> dict[str, Any]:
+def _build_package(
+    resolved: ResolvedDeck,
+    output_path: Path,
+    transplant: dict | None = None,
+) -> dict[str, Any]:
     return assemble_package(
         theme=resolved.theme,
         slide_data=resolved.slide_data,
-        output_path=output_path
+        output_path=output_path,
+        transplant=transplant,
     )
