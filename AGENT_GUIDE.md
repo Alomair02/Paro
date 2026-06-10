@@ -156,3 +156,10 @@ fonts, and a type scale derived from its master — exactly, no inference. An in
 `<theme>` with the same name deliberately wins over ingestion: explicit author intent
 outranks the template. Write new decks with theme tokens and they inherit whatever
 template the user supplies.
+
+**What ingestion does NOT yet consume: the template's slide layouts.** Placeholders
+(`layout="title"`, `ctrTitle`, `subTitle`…) resolve against Paro's own generic layouts,
+not the template's designed ones — a placeholder-based cover comes out plain, not
+branded. For covers and section dividers on an ingested theme, **compose explicitly**
+(`layout="blank"` + theme-token shapes/text, e.g. an `accent1` band or `lt2` panel)
+instead of trusting placeholders to carry the template's art.

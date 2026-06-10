@@ -51,8 +51,10 @@ def make_prompt(brief: str, out_path: str, theme_pptx: str | None) -> str:
     ]
     if theme_pptx:
         parts.append(
-            f"Theme template: {theme_pptx} — pass theme_pptx to paro_build and set the"
-            f" deck's theme attribute to the template's registered name (its file stem)."
+            f"Theme template: {theme_pptx} — on EVERY paro_build call pass"
+            f' theme_pptx="{theme_pptx}" and theme_name="ingested", and set the deck'
+            f' root to theme="ingested". Use theme tokens (dk1/accent1/...) so the'
+            f" template's identity carries; do not hard-code its hex values."
         )
     return "\n".join(parts)
 
