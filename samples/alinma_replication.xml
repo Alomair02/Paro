@@ -22,12 +22,12 @@
   <slide layout="blank" flow="stack" pad="0.4in" gap="0.1in">
     <text size="26pt" color="accent1" h="0.5in">Alinma Overview</text>
     <line color="D0D0CE" width="0.75pt"/>
-    <text size="16pt" bold="true" color="dk1">The youngest bank in KSA</text>
+    <text size="18pt" color="dk1" h="0.55in">The youngest bank in KSA</text>
 
-    <grid cols="24" gap="0.16in" h="3.65in">
+    <grid cols="24" gap="0.16in" h="3.3in">
       <stack col="1" colspan="11" gap="0.08in">
         <text align="ctr" bold="true" size="11pt" color="dk1">Financial Position</text>
-        <stack line="9FC4C8" lineWidth="1pt" pad="0.12in" h="1.5in" justify="ctr">
+        <stack line="9FC4C8" lineWidth="1pt" pad="0.12in" justify="ctr">
           <grid cols="3" gap="0.08in">
             <stack gap="0.03in" justify="ctr">
               <text align="ctr" bold="true" size="11pt" color="dk1">Net Profit Margin</text>
@@ -47,7 +47,7 @@
           </grid>
         </stack>
         <text align="ctr" bold="true" size="11pt" color="dk1">Rating Strength</text>
-        <stack line="9FC4C8" lineWidth="1pt" pad="0.12in" h="1.3in" justify="ctr">
+        <stack line="9FC4C8" lineWidth="1pt" pad="0.12in" justify="ctr">
           <grid cols="2" gap="0.08in">
             <stack gap="0.03in" justify="ctr">
               <text align="ctr" bold="true" size="11pt" color="dk1">Fitch</text>
@@ -65,7 +65,7 @@
 
       <stack col="12" colspan="4" gap="0.08in">
         <text align="ctr" bold="true" size="11pt" color="dk1">Retail Digital Snapshot</text>
-        <stack line="9FC4C8" lineWidth="1pt" pad="0.14in" gap="0.22in" h="3.25in" justify="ctr">
+        <stack line="9FC4C8" lineWidth="1pt" pad="0.14in" gap="0.22in" justify="ctr">
           <stack gap="0.03in">
             <text align="ctr" bold="true" size="18pt" color="accent1">21m</text>
             <text align="ctr" size="9pt" color="dk1">Monthly Average Users</text>
@@ -83,7 +83,7 @@
 
       <stack col="16" colspan="6" gap="0.08in">
         <text align="ctr" bold="true" size="11pt" color="dk1">KSA Market Share</text>
-        <grid cols="2" gap="0.12in" h="3.25in">
+        <grid cols="2" gap="0.12in">
           <stack line="9FC4C8" lineWidth="1pt" pad="0.12in" gap="0.03in" justify="ctr">
             <text bold="true" size="18pt" color="accent1">6.4%</text>
             <text size="9.5pt" color="dk1">Assets</text>
