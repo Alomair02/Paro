@@ -1,5 +1,7 @@
 *.pptx
 *.json
+*.png
+*.pdf
 
 # Python cache directories
 __pycache__/
@@ -12,3 +14,4 @@ __pycache__/
 
 transpiler/__pycache__node_modules/
 samples/assets/
+
