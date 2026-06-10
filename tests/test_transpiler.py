@@ -1488,6 +1488,35 @@ class CompositeTests(unittest.TestCase):
             )
 
 
+class MixedRunWhitespaceTests(unittest.TestCase):
+    """Found live by the authoring agent: '<run bold>renewal</run> by Q3'
+    rendered as 'renewalby Q3' — boundary spaces at run joints were
+    stripped along with XML indentation."""
+
+    def _runs(self, p_markup: str):
+        deck = parse_resolve(
+            f"""
+            <deck><slide layout="blank" flow="free">
+              <text x="1in" y="1in" w="6in" h="1in">{p_markup}</text>
+            </slide></deck>
+            """
+        )
+        text = deck.slide_data[0]["shapes"][0]
+        return [run["text"] for run in text["paragraphs"][0]["runs"]]
+
+    def test_space_after_run_survives(self):
+        runs = self._runs('<p>Sign <run bold="true">the renewal</run> by end of Q3</p>')
+        self.assertEqual(runs, ["Sign ", "the renewal", " by end of Q3"])
+
+    def test_space_between_two_runs_survives(self):
+        runs = self._runs('<p><run bold="true">a</run> and <run italic="true">b</run></p>')
+        self.assertEqual(runs[1], " and ")
+
+    def test_xml_indentation_is_not_text(self):
+        runs = self._runs("<p>\n              <run>alone</run>\n            </p>")
+        self.assertEqual(runs, ["alone"])
+
+
 class GateBacklogTests(unittest.TestCase):
     """The two authoring-cost gaps named by the P&L Trends gate check."""
 

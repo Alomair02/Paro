@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 from lxml import etree
@@ -347,8 +348,14 @@ class DSLParser:
     def _node_from_element(self, element: etree._Element, defs: dict[str, list[Node]]) -> Node:
         kind = self._local_name(element)
         text = self._direct_text(element)
+        element_children = list(element)
+        has_run_children = any(self._local_name(c) == "run" for c in element_children)
+        if kind == "p" and has_run_children and element.text and element.text.strip():
+            # mixed content: "Sign <run>now</run>" must keep its boundary
+            # space — _direct_text's strip would fuse "Sign" onto the run.
+            text = self._inline_segment(element.text, last=False)
         children: list[Node] = []
-        for child in element:
+        for position, child in enumerate(element_children):
             child_kind = self._local_name(child)
             if child_kind == "use":
                 ref = child.get("ref")
@@ -360,10 +367,27 @@ class DSLParser:
                 if child.tail and child.tail.strip():
                     if node.kind == "run":
                         children.append(node)
-                        children.append(Node("run", {}, [], child.tail.strip()))
+                        is_last = position == len(element_children) - 1
+                        children.append(
+                            Node("run", {}, [], self._inline_segment(child.tail, last=is_last))
+                        )
                         continue
                 children.append(node)
         return Node(kind, dict(element.attrib), children, text)
+
+    @staticmethod
+    def _inline_segment(raw: str, *, last: bool) -> str:
+        """Collapse whitespace in mixed-run content, keeping intentional
+        boundary spaces ("<run>a</run> and ") while dropping XML formatting
+        whitespace — edges that contain a newline are indentation, not text."""
+        collapsed = re.sub(r"\s+", " ", raw)
+        leading_ws = raw[: len(raw) - len(raw.lstrip())]
+        trailing_ws = raw[len(raw.rstrip()):]
+        if "\n" in leading_ws:
+            collapsed = collapsed.lstrip()
+        if last or "\n" in trailing_ws:
+            collapsed = collapsed.rstrip()
+        return collapsed
 
     def _direct_text(self, element: etree._Element) -> str:
         pieces: list[str] = []
