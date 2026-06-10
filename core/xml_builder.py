@@ -189,6 +189,12 @@ def make_effect_list(shadow: dict = None) -> etree._Element:
     return effect_lst
 
 
+def append_color(parent: etree._Element, color: str, transforms: dict[str, int] = None) -> etree._Element:
+    """Append a schemeClr/srgbClr child to parent (public seam for bare color slots
+    like a:duotone children, where no fill wrapper element is wanted)."""
+    return _append_color(parent, color, transforms)
+
+
 def _append_color(parent: etree._Element, color: str, transforms: dict[str, int] = None) -> etree._Element:
     if color in _SCHEME_TOKENS:
         clr = etree.SubElement(parent, qn("a", "schemeClr"))

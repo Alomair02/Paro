@@ -254,6 +254,9 @@ Content: the text string.
 | `fit` | `contain`, `cover`, `stretch` | `contain` | `contain` preserves aspect ratio; prevents the stretch bug |
 | `alt` | string | none | Accessibility text |
 | `w`, `h`, `x`, `y` | unit / `%` | from container | Only in `<free>`, or to override |
+| `duotone` | one or two colors | none | Brand wash: `duotone="0F2B3C"` (dark→that color, highlights→white) or `duotone="dk2 lt2"` |
+| `grayscale` | `true`/`false` | `false` | Desaturate the picture data |
+| `alpha` | `%` | opaque | Picture opacity (`a:alphaModFix`) |
 
 ### `<shape>`
 

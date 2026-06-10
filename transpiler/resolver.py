@@ -256,6 +256,17 @@ class LayoutResolver:
             "src": image_attrs["src"],
             "fit": fit,
         }
+        if self._is_true(image_attrs.get("grayscale", "false")):
+            shape["grayscale"] = True
+        if "duotone" in image_attrs:
+            tokens = str(image_attrs["duotone"]).replace(",", " ").split()
+            if len(tokens) == 1:
+                tokens.append("FFFFFF")  # one color = wash over white highlights
+            if len(tokens) != 2:
+                raise ValueError("Image duotone takes one or two colors: 'dark [light]'")
+            shape["duotone"] = tokens
+        if "alpha" in image_attrs:
+            shape["alpha"] = self._percent_thousandths(image_attrs["alpha"])
 
         if placeholder:
             ph = self._resolve_placeholder(placeholder, node.attrs.get("idx"))

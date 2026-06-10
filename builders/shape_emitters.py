@@ -11,6 +11,7 @@ from builders.common import REFERENCE, relationship_target
 from core.content_type_reg import ContentTypeRegistry
 from core.relationship_reg import RelationshipRegistry
 from core.xml_builder import (
+    append_color,
     make_effect_list,
     make_gradient_fill,
     make_ln,
@@ -251,6 +252,7 @@ def emit_image(
     blip_fill = etree.SubElement(pic, qn("p", "blipFill"))
     blip = etree.SubElement(blip_fill, qn("a", "blip"))
     blip.set(qn("r", "embed"), rid)
+    _append_blip_effects(blip, shape_data)
     _append_image_crop(blip_fill, shape_data.get("crop"))
     stretch = etree.SubElement(blip_fill, qn("a", "stretch"))
     etree.SubElement(stretch, qn("a", "fillRect"))
@@ -805,6 +807,19 @@ def _register_image_part(
         relationship_target(slide_state.part_path, media_part_path),
         RelationshipRegistry.IMAGE,
     )
+
+
+def _append_blip_effects(blip: etree._Element, shape_data: dict) -> None:
+    """Color treatments on the picture data: alphaModFix, grayscl, duotone."""
+    if shape_data.get("alpha") is not None:
+        etree.SubElement(blip, qn("a", "alphaModFix")).set("amt", str(int(shape_data["alpha"])))
+    if shape_data.get("grayscale"):
+        etree.SubElement(blip, qn("a", "grayscl"))
+    duotone = shape_data.get("duotone")
+    if duotone:
+        duo = etree.SubElement(blip, qn("a", "duotone"))
+        for color in duotone:
+            append_color(duo, color)
 
 
 def _append_image_crop(blip_fill: etree._Element, crop: dict | None):

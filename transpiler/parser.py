@@ -80,7 +80,9 @@ ALLOWED_ATTRS = {
     | GEOMETRY_ATTRS,
     "p": {"level", "align", "bullet", "bold", "italic", "role"},
     "run": {"bold", "italic", "underline", "size", "color", "font", "link"},
-    "image": {"src", "placeholder", "idx", "fit", "alt"} | GRID_PLACEMENT_ATTRS | GEOMETRY_ATTRS,
+    "image": {"src", "placeholder", "idx", "fit", "alt", "grayscale", "duotone", "alpha"}
+    | GRID_PLACEMENT_ATTRS
+    | GEOMETRY_ATTRS,
     "shape": {
         "geom",
         "fill",

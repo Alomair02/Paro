@@ -1400,6 +1400,35 @@ class ShapeUnlockTests(unittest.TestCase):
                 """
             )
 
+    def test_image_color_treatments_emit_blip_effects(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            image_path = Path(tmpdir) / "photo.png"
+            write_test_image(image_path, (100, 100))
+            slide_xml = self._slide_xml(
+                f'<image src="{image_path}" x="1in" y="1in" w="2in" h="2in"'
+                ' duotone="0F2B3C" grayscale="true" alpha="40%"/>'
+            )
+        tree = parse_xml(slide_xml)
+        blip = tree.find(f".//{qn('a', 'blip')}")
+        alpha_fix = blip.find(qn("a", "alphaModFix"))
+        self.assertIsNotNone(alpha_fix)
+        self.assertEqual(alpha_fix.get("amt"), "40000")
+        self.assertIsNotNone(blip.find(qn("a", "grayscl")))
+        duotone = blip.find(qn("a", "duotone"))
+        self.assertIsNotNone(duotone)
+        colors = [child.get("val") for child in duotone]
+        self.assertEqual(colors, ["0F2B3C", "FFFFFF"])
+
+    def test_image_without_treatments_emits_bare_blip(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            image_path = Path(tmpdir) / "photo.png"
+            write_test_image(image_path, (100, 100))
+            slide_xml = self._slide_xml(
+                f'<image src="{image_path}" x="1in" y="1in" w="2in" h="2in"/>'
+            )
+        for effect in ("alphaModFix", "grayscl", "duotone"):
+            self.assertNotIn(effect, slide_xml)
+
     def test_line_end_markers_emit_head_and_tail(self):
         slide_xml = self._slide_xml(
             '<line x1="1in" y1="1in" x2="3in" y2="2in" head="oval" tail="arrow"/>'
