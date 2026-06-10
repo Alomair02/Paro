@@ -727,6 +727,65 @@ class TranspilerValidatorTests(unittest.TestCase):
         with self.assertRaises(TranspileValidationError):
             validator.raise_for_errors(validator.validate(bounds))
 
+    def test_design_lint_tiny_text_sprawl_edge_and_font_count(self):
+        tiny = parse_resolve(
+            '<deck><slide layout="blank" flow="free">'
+            '<text x="1in" y="1in" w="3in" h="0.4in" size="6pt">microscopic footnote</text>'
+            "</slide></deck>"
+        )
+        sprawl = parse_resolve(
+            """
+            <deck><slide layout="blank" flow="free">
+              <text x="1in" y="0.5in" w="3in" h="0.4in" size="9pt">a</text>
+              <text x="1in" y="1.0in" w="3in" h="0.4in" size="11pt">b</text>
+              <text x="1in" y="1.5in" w="3in" h="0.4in" size="13pt">c</text>
+              <text x="1in" y="2.0in" w="3in" h="0.4in" size="15pt">d</text>
+              <text x="1in" y="2.5in" w="3in" h="0.4in" size="17pt">e</text>
+              <text x="1in" y="3.0in" w="3in" h="0.4in" size="21pt">f</text>
+            </slide></deck>
+            """
+        )
+        edge = parse_resolve(
+            '<deck><slide layout="blank" flow="free">'
+            '<text x="0.02in" y="1in" w="3in" h="0.6in" size="20pt">Heading on the rim</text>'
+            "</slide></deck>"
+        )
+        edge_footer_ok = parse_resolve(
+            '<deck><slide layout="blank" flow="free">'
+            '<text x="0.02in" y="7.2in" w="3in" h="0.25in" size="8pt">footer line</text>'
+            "</slide></deck>"
+        )
+        fonts = parse_resolve(
+            """
+            <deck><slide layout="blank" flow="free">
+              <text x="1in" y="0.5in" w="3in" h="0.4in" font="Arial">a</text>
+              <text x="1in" y="1.0in" w="3in" h="0.4in" font="Georgia">b</text>
+              <text x="1in" y="1.5in" w="3in" h="0.4in" font="Verdana">c</text>
+            </slide></deck>
+            """
+        )
+
+        validator = Validator(measure_text=False)
+        self.assertIn("lint_tiny_text", {i.code for i in validator.validate(tiny)})
+        self.assertIn("lint_size_sprawl", {i.code for i in validator.validate(sprawl)})
+        self.assertIn("lint_edge", {i.code for i in validator.validate(edge)})
+        self.assertNotIn("lint_edge", {i.code for i in validator.validate(edge_footer_ok)})
+        self.assertIn("lint_font_sprawl", {i.code for i in validator.validate(fonts)})
+
+    def test_text_fit_checks_every_block_not_just_the_last(self):
+        # Regression: an indentation slip ran _validate_text_fit once per
+        # slide on the final block only. First block overflows, last fits.
+        deck = parse_resolve(
+            """
+            <deck><slide layout="blank" flow="free">
+              <text x="1in" y="1in" w="0.5in" h="0.2in" size="24pt">This long heading cannot possibly fit this box</text>
+              <text x="1in" y="4in" w="6in" h="1in" size="12pt">fits</text>
+            </slide></deck>
+            """
+        )
+        issues = Validator().validate(deck)
+        self.assertIn("text_overflow", {i.code for i in issues})
+
     def test_validator_reports_missing_image_without_resolver_crash(self):
         missing = Path("tests/fixtures/does-not-exist.png")
         deck = parse_resolve(

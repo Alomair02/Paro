@@ -122,12 +122,109 @@ class Validator:
                     )
 
             if self.measure_text:
+                # NB: text-fit must run per block; an earlier indentation slip
+                # had it outside the loop, silently checking only the last
+                # block of each slide.
                 for block in slide.blocks:
                     self._validate_font_support(deck, slide.slide_data["index"], block, issues)
-                if self.measure_text:
                     self._validate_text_fit(deck, slide.slide_data["index"], block, issues)
 
+            self._lint_slide(deck, slide, slide_bounds, issues)
+
         return issues
+
+    # ------------------------------------------------------------------
+    # Design lint: taste warnings, not correctness errors. These give an
+    # agent author machine-checkable feedback a human eye would otherwise
+    # supply. All advisory (severity "warning").
+    # ------------------------------------------------------------------
+
+    MIN_READABLE_PT = 8.0
+    MAX_DISTINCT_SIZES = 5
+    MAX_FONT_FAMILIES = 2
+    EDGE_MARGIN_EMU = 137160  # 0.15in
+    EDGE_MIN_SIZE_PT = 10.5  # footers/source lines may hug edges; content must not
+
+    def _lint_slide(self, deck: ResolvedDeck, slide, slide_bounds: Box, issues: list[ValidationIssue]):
+        slide_index = slide.slide_data["index"]
+        sizes_on_slide: set[float] = set()
+        fonts_on_slide: set[str] = set()
+
+        for block in slide.blocks:
+            if not self._is_text_block(block):
+                continue
+            block_min_size: float | None = None
+            block_max_size = 0.0
+            preview = ""
+            for paragraph in self._paragraphs_from_content(block.content, ensure=False):
+                role = (
+                    paragraph.get("role")
+                    or (block.content or {}).get("role")
+                    or block.attrs.get("role")
+                    or "body"
+                )
+                role_bundle = self._role_bundle(deck, role)
+                size_pt = self._paragraph_size_points(paragraph, block, role_bundle)
+                if size_pt:
+                    sizes_on_slide.add(round(size_pt * 2) / 2)
+                    block_max_size = max(block_max_size, size_pt)
+                    if block_min_size is None or size_pt < block_min_size:
+                        block_min_size = size_pt
+                        preview = self._paragraph_text(paragraph)[:60]
+                font_family = self._paragraph_font_family(deck, paragraph, role)
+                if font_family:
+                    fonts_on_slide.add(font_family.strip().lower())
+
+            if block_min_size is not None and block_min_size < self.MIN_READABLE_PT:
+                issues.append(
+                    ValidationIssue(
+                        "warning",
+                        "lint_tiny_text",
+                        f"Slide {slide_index}: text at {block_min_size:.1f}pt is below the"
+                        f" {self.MIN_READABLE_PT:.0f}pt readability floor ({preview!r})",
+                        {"slide_index": slide_index, "size_pt": block_min_size, "text": preview},
+                    )
+                )
+
+            if block_max_size >= self.EDGE_MIN_SIZE_PT:
+                box = block.box
+                if (
+                    box.x < self.EDGE_MARGIN_EMU
+                    or box.y < self.EDGE_MARGIN_EMU
+                    or slide_bounds.w - (box.x + box.w) < self.EDGE_MARGIN_EMU
+                    or slide_bounds.h - (box.y + box.h) < self.EDGE_MARGIN_EMU
+                ):
+                    issues.append(
+                        ValidationIssue(
+                            "warning",
+                            "lint_edge",
+                            f"Slide {slide_index}: {block_max_size:.0f}pt text sits within"
+                            f" 0.15in of the slide edge — give content a margin",
+                            {"slide_index": slide_index, "size_pt": block_max_size},
+                        )
+                    )
+
+        if len(sizes_on_slide) > self.MAX_DISTINCT_SIZES:
+            issues.append(
+                ValidationIssue(
+                    "warning",
+                    "lint_size_sprawl",
+                    f"Slide {slide_index} uses {len(sizes_on_slide)} distinct font sizes"
+                    f" ({', '.join(f'{s:g}' for s in sorted(sizes_on_slide))}) — consolidate"
+                    f" to at most {self.MAX_DISTINCT_SIZES}",
+                    {"slide_index": slide_index, "sizes": sorted(sizes_on_slide)},
+                )
+            )
+        if len(fonts_on_slide) > self.MAX_FONT_FAMILIES:
+            issues.append(
+                ValidationIssue(
+                    "warning",
+                    "lint_font_sprawl",
+                    f"Slide {slide_index} uses {len(fonts_on_slide)} font families"
+                    f" ({', '.join(sorted(fonts_on_slide))}) — stick to the theme pair",
+                    {"slide_index": slide_index, "fonts": sorted(fonts_on_slide)},
+                )
+            )
 
     def raise_for_errors(self, issues: list[ValidationIssue]):
         errors = [issue for issue in issues if issue.severity == "error"]
