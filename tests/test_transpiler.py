@@ -1333,6 +1333,101 @@ class StackContentSizingTests(unittest.TestCase):
         self.assertEqual(first["w"], second["w"])
 
 
+class CompositeTests(unittest.TestCase):
+    """Tier-1 diagram composites lower to autoshapes + labels."""
+
+    def _shapes(self, body: str):
+        deck = parse_resolve(
+            f"""
+            <deck>
+              <slide layout="blank" flow="free">
+                {body}
+              </slide>
+            </deck>
+            """
+        )
+        return deck.slide_data[0]["shapes"]
+
+    def test_funnel_lowers_to_cone_of_trapezoids_with_tip_triangle(self):
+        shapes = self._shapes(
+            """
+            <funnel x="1in" y="1in" w="4in" h="4in">
+              <stage fill="3D52F3">90%</stage>
+              <stage fill="121212">80%</stage>
+              <stage fill="9CA0A6">50%</stage>
+            </funnel>
+            """
+        )
+        bands = [s for s in shapes if s["preset"] in ("trapezoid", "triangle")]
+        self.assertEqual([s["preset"] for s in bands], ["trapezoid", "trapezoid", "triangle"])
+        for band in bands:
+            self.assertTrue(band.get("flipV"))
+        # equal slice heights on a linear cone -> identical adj on every band
+        adjs = {band["adjustments"]["adj"] for band in bands if band["preset"] == "trapezoid"}
+        self.assertEqual(len(adjs), 1)
+        # widths shrink and stay centered
+        self.assertGreater(bands[0]["w"], bands[1]["w"])
+        c0 = bands[0]["x"] + bands[0]["w"] / 2
+        c1 = bands[1]["x"] + bands[1]["w"] / 2
+        self.assertAlmostEqual(c0, c1, delta=2)
+        # labels ride as separate unflipped overlays (LO mirrors flipped text)
+        overlays = [s for s in shapes if s["preset"] == "rect" and s["fill"] == "none"]
+        self.assertEqual(len(overlays), 3)
+        self.assertEqual(overlays[0]["paragraphs"][0]["runs"][0]["text"], "90%")
+
+    def test_funnel_requires_two_stages(self):
+        with self.assertRaises(ValueError):
+            self._shapes('<funnel x="1in" y="1in" w="4in" h="4in"><stage>only</stage></funnel>')
+
+    def test_process_emits_homeplate_then_chevrons(self):
+        shapes = self._shapes(
+            """
+            <process x="1in" y="1in" w="10in" h="1in">
+              <step>Discover</step><step>Define</step><step>Deliver</step>
+            </process>
+            """
+        )
+        self.assertEqual([s["preset"] for s in shapes], ["homePlate", "chevron", "chevron"])
+        self.assertEqual(shapes[1]["paragraphs"][0]["runs"][0]["text"], "Define")
+
+    def test_pyramid_apex_triangle_then_widening_trapezoids(self):
+        shapes = self._shapes(
+            """
+            <pyramid x="1in" y="1in" w="4in" h="4in">
+              <tier>Vision</tier><tier>Strategy</tier><tier>Execution</tier>
+            </pyramid>
+            """
+        )
+        self.assertEqual([s["preset"] for s in shapes], ["triangle", "trapezoid", "trapezoid"])
+        self.assertNotIn("flipV", shapes[0])  # apex points up unflipped
+        self.assertGreater(shapes[2]["w"], shapes[1]["w"])
+
+    def test_venn_emits_alpha_ellipses_and_label_overlays(self):
+        shapes = self._shapes(
+            """
+            <venn x="1in" y="1in" w="5in" h="4in">
+              <set fill="3D52F3">A</set>
+              <set fill="9CA0A6">B</set>
+              <set fill="121212">C</set>
+            </venn>
+            """
+        )
+        ellipses = [s for s in shapes if s["preset"] == "ellipse"]
+        self.assertEqual(len(ellipses), 3)
+        for ellipse in ellipses:
+            self.assertEqual(ellipse["fill_style"]["transforms"]["alpha"], 55000)
+            self.assertEqual(ellipse["w"], ellipse["h"])  # circles
+        labels = [s for s in shapes if s["preset"] == "rect"]
+        self.assertEqual(len(labels), 3)
+
+    def test_venn_rejects_four_sets(self):
+        with self.assertRaises(ValueError):
+            self._shapes(
+                '<venn x="1in" y="1in" w="5in" h="4in">'
+                "<set>A</set><set>B</set><set>C</set><set>D</set></venn>"
+            )
+
+
 class ShapeUnlockTests(unittest.TestCase):
     """flipH/flipV, adj guides, fill alpha, and shadow on <shape>."""
 

@@ -8,19 +8,14 @@
          right column is absolutely positioned -->
   <slide layout="blank" flow="free">
 
-    <!-- funnel bands (wide-at-top = trapezoid rotated 180) -->
-    <shape geom="trapezoid" rot="180" x="0.30in" y="1.25in" w="4.6in" h="0.92in" fill="#3D52F3" line="none"/>
-    <shape geom="trapezoid" rot="180" x="0.65in" y="2.27in" w="3.9in" h="0.92in" fill="#121212" line="none"/>
-    <shape geom="trapezoid" rot="180" x="1.00in" y="3.29in" w="3.2in" h="0.92in" fill="#9CA0A6" line="none"/>
-    <shape geom="trapezoid" rot="180" x="1.35in" y="4.31in" w="2.5in" h="0.92in" fill="#E7E9EC" line="none"/>
-    <shape geom="triangle"  rot="180" x="1.75in" y="5.33in" w="1.7in" h="0.92in" fill="#74A7D8" line="none"/>
-
-    <!-- % labels overlaid because the bands are rotated -->
-    <text x="1.6in" y="1.51in" w="2in" h="0.4in" align="ctr" bold="true" size="13pt" color="FFFFFF">90%</text>
-    <text x="1.6in" y="2.53in" w="2in" h="0.4in" align="ctr" bold="true" size="13pt" color="FFFFFF">80%</text>
-    <text x="1.6in" y="3.55in" w="2in" h="0.4in" align="ctr" bold="true" size="13pt" color="FFFFFF">70%</text>
-    <text x="1.6in" y="4.57in" w="2in" h="0.4in" align="ctr" bold="true" size="13pt" color="#C3C7CD">60%</text>
-    <text x="1.6in" y="5.40in" w="2in" h="0.4in" align="ctr" bold="true" size="13pt" color="FFFFFF">50%</text>
+    <!-- funnel: was 10 hand-mathed elements, now one composite -->
+    <funnel x="0.30in" y="1.25in" w="4.6in" h="5.0in">
+      <stage fill="#3D52F3">90%</stage>
+      <stage fill="#121212">80%</stage>
+      <stage fill="#9CA0A6">70%</stage>
+      <stage fill="#E7E9EC" color="#C3C7CD">60%</stage>
+      <stage fill="#74A7D8">50%</stage>
+    </funnel>
 
     <!-- annotation block 1 -->
     <shape geom="roundRect" radius="0.07in" x="5.70in" y="1.40in" w="0.34in" h="0.34in" fill="#15181D" line="none">

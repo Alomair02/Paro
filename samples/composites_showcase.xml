@@ -1,0 +1,36 @@
+<deck size="16:9" background="#F1F2F4">
+  <!-- All four Tier-1 diagram composites on one slide -->
+  <slide layout="blank" flow="free">
+    <text x="0.5in" y="0.3in" w="8in" h="0.5in" size="20pt" bold="true" color="#15181D">Tier-1 composites</text>
+
+    <text x="0.5in" y="1.0in" w="3in" h="0.35in" size="11pt" bold="true" color="#8A8E96">FUNNEL</text>
+    <funnel x="0.5in" y="1.45in" w="3.4in" h="3.4in">
+      <stage fill="#3D52F3">90%</stage>
+      <stage fill="#121212">80%</stage>
+      <stage fill="#9CA0A6">70%</stage>
+      <stage fill="#74A7D8">50%</stage>
+    </funnel>
+
+    <text x="4.6in" y="1.0in" w="3in" h="0.35in" size="11pt" bold="true" color="#8A8E96">PYRAMID</text>
+    <pyramid x="4.6in" y="1.45in" w="3.4in" h="3.4in">
+      <tier fill="#3D52F3">Vision</tier>
+      <tier fill="#121212">Strategy</tier>
+      <tier fill="#9CA0A6">Execution</tier>
+    </pyramid>
+
+    <text x="8.7in" y="1.0in" w="3in" h="0.35in" size="11pt" bold="true" color="#8A8E96">VENN</text>
+    <venn x="8.7in" y="1.2in" w="4.2in" h="3.9in" labelSize="11pt">
+      <set fill="#3D52F3">Daily 50%</set>
+      <set fill="#9CA0A6">Mktg 27%</set>
+      <set fill="#121212">Profit 13%</set>
+    </venn>
+
+    <text x="0.5in" y="5.4in" w="3in" h="0.35in" size="11pt" bold="true" color="#8A8E96">PROCESS</text>
+    <process x="0.5in" y="5.85in" w="12.3in" h="1.0in">
+      <step fill="#3D52F3">Discover</step>
+      <step fill="#121212">Define</step>
+      <step fill="#9CA0A6">Design</step>
+      <step fill="#74A7D8">Deliver</step>
+    </process>
+  </slide>
+</deck>

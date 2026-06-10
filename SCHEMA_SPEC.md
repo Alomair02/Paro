@@ -395,6 +395,29 @@ Sketched shape (subject to change when built):
 
 ---
 
+## 3b. Diagram composites (Tier-1, v1)
+
+Parametric diagrams that the resolver lowers to autoshapes and text — the `<timeline>`
+pattern. The resolver computes all band/step geometry; authors never hand-place a slice.
+Each takes `x/y/w/h` (or grid placement / stack flex) plus:
+
+| Element | Children | Attributes | Notes |
+|---|---|---|---|
+| `<funnel>` | 2+ `<stage>` | `gap` (0.1in), `labelSize` (13pt), `tip` (`point`\|`flat`) | True cone: trapezoid bands (flipV + computed `adj`), triangle tip. `tip="flat"` keeps the last band a trapezoid |
+| `<process>` | 2+ `<step>` | `gap` (0.08in), `labelSize` (12pt) | Horizontal flow: `homePlate` first, `chevron` rest, equal widths |
+| `<pyramid>` | 2+ `<tier>` | `gap` (0.06in), `labelSize` (13pt), `tip` (`point`\|`flat`) | Tiers top→bottom, widening downward; apex triangle is tight — use `tip="flat"` or short top labels |
+| `<venn>` | 2–3 `<set>` | `alpha` (55%), `labelSize` (14pt) | Overlapping alpha circles; labels overlay in each set's exclusive region |
+
+Each item child (`<stage>`/`<step>`/`<tier>`/`<set>`) takes `fill` (defaults cycle
+accent1, dk2, accent3, accent4, accent2, accent5), `color` (label color, default `lt1`),
+`size` (label override), and its text content as the label.
+
+Labels on flipped geometry are emitted as separate unflipped overlays: PowerPoint keeps
+text upright inside flipped shapes but LibreOffice mirrors it, and composites must render
+identically in both.
+
+---
+
 ## 4. Layout Resolution (what the transpiler computes)
 
 Each container type has a resolver that converts its children into absolute EMU boxes:
@@ -403,6 +426,7 @@ Each container type has a resolver that converts its children into absolute EMU 
 - **grid resolver** (moderate): divide container width into `cols` columns minus gutters; place each child at its `col`/`row`, sized by `colspan`/`rowspan`. Row heights from content or equal division.
 - **table resolver** (moderate): like grid, but with header styling, per-column widths, and cell merging; emits an OOXML `a:tbl`.
 - **timeline resolver** (moderate, Tier-1 composite): computes period-column geometry once, then aligns task bars (by `start`/`span`) and milestone markers (by `at`) to the same column tracks; emits shapes + lines + labels. No new engine part.
+- **diagram composites** (Tier-1, v1): `<funnel>`, `<process>`, `<pyramid>`, `<venn>` — one resolver function each, lowering to autoshapes + labels. See §3b.
 - **free resolver** (passthrough): children carry absolute geometry; convert units to EMU.
 
 Resolution is recursive: a container's resolved box becomes the coordinate space for its children. Styled containers (`fill`/`line`/`radius`) emit a background `<shape>` behind their children automatically — the author never draws it. Output is a flat list of absolutely-positioned blocks: the slide dict the engine's `shape_emitters` already consume.

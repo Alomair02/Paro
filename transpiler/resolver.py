@@ -125,6 +125,14 @@ class LayoutResolver:
             self._resolve_timeline(node, box, parent_kind)
         elif node.kind == "chart":
             self._resolve_chart(node, box, parent_kind)
+        elif node.kind == "funnel":
+            self._resolve_funnel(node, box, parent_kind)
+        elif node.kind == "process":
+            self._resolve_process(node, box, parent_kind)
+        elif node.kind == "pyramid":
+            self._resolve_pyramid(node, box, parent_kind)
+        elif node.kind == "venn":
+            self._resolve_venn(node, box, parent_kind)
         else:
             raise ValueError(f"Unsupported AST node: {node.kind}")
 
@@ -374,6 +382,238 @@ class LayoutResolver:
         self._append_shape(shape)
         line_box = Box(min(x1, x2), min(y1, y2), abs(x2 - x1), abs(y2 - y1))
         self._record_block("line", line_box, parent_kind, node.attrs)
+
+    # ------------------------------------------------------------------
+    # Tier-1 composites: parametric diagrams that lower to autoshapes and
+    # text — one resolver function each, zero engine changes (the
+    # <timeline> pattern). Geometry is computed here so authors never
+    # hand-place a slice again.
+    # ------------------------------------------------------------------
+
+    COMPOSITE_DEFAULT_TONES = ("accent1", "dk2", "accent3", "accent4", "accent2", "accent5")
+
+    def _composite_items(self, node: Node, child_kind: str, minimum: int = 2) -> list[Node]:
+        items = [child for child in node.children if child.kind == child_kind]
+        if len(items) < minimum:
+            raise ValueError(f"<{node.kind}> needs at least {minimum} <{child_kind}> children")
+        return items
+
+    def _composite_tone(self, item: Node, index: int) -> str:
+        return item.attrs.get("fill", self.COMPOSITE_DEFAULT_TONES[index % len(self.COMPOSITE_DEFAULT_TONES)])
+
+    def _composite_label_size(self, item: Node, default_pt: float) -> float:
+        return self._points(item.attrs["size"]) if item.attrs.get("size") else default_pt
+
+    def _emit_composite_shape(
+        self,
+        preset: str,
+        x: float,
+        y: float,
+        w: float,
+        h: float,
+        fill: str,
+        label: str | None,
+        label_color: str,
+        label_size_pt: float,
+        flip_v: bool = False,
+        adjustments: dict[str, int] | None = None,
+        alpha: int | None = None,
+    ):
+        shape: dict[str, Any] = {
+            "type": "autoshape",
+            "name": f"{preset} Shape",
+            "preset": preset,
+            "fill": fill,
+            "line": False,
+            "anchor": "ctr",
+            "x": round(x),
+            "y": round(y),
+            "w": round(w),
+            "h": round(h),
+        }
+        if flip_v:
+            shape["flipV"] = True
+        if adjustments:
+            shape["adjustments"] = adjustments
+        if alpha is not None and fill != "none":
+            shape["fill_style"] = {
+                "type": "solid",
+                "color": fill,
+                "transforms": {"alpha": alpha},
+            }
+        # PowerPoint keeps text upright inside flipped shapes but LibreOffice
+        # mirrors it, so flipped geometry gets its label as a separate
+        # unflipped overlay instead of inline text.
+        if label and not flip_v:
+            shape["paragraphs"] = [
+                {
+                    "runs": [
+                        {"text": label, "bold": True, "size_pt": label_size_pt, "color": label_color}
+                    ],
+                    "align": "ctr",
+                }
+            ]
+        self._append_shape(shape)
+        if label and flip_v:
+            self._emit_composite_shape(
+                "rect", x, y, w, h, "none", label, label_color, label_size_pt
+            )
+
+    def _resolve_funnel(self, node: Node, box: Box, parent_kind: str):
+        actual_box = self._box_for_node(node, box)
+        stages = self._composite_items(node, "stage")
+        n = len(stages)
+        gap = self._unit(node.attrs.get("gap", "0.1in"), actual_box.h)
+        label_size = self._points(node.attrs.get("labelSize", "13pt"))
+        tip = node.attrs.get("tip", "point")
+        if tip not in ("point", "flat"):
+            raise ValueError(f"Unsupported funnel tip: {tip!r} (expected point|flat)")
+        slice_h = (actual_box.h - gap * (n - 1)) / n
+        if slice_h <= 0:
+            raise ValueError("<funnel> gap leaves no room for stages")
+
+        # The cone tapers linearly from full width at the top to the tip.
+        end_ratio = 0.0 if tip == "point" else 0.25
+        center_x = actual_box.x + actual_box.w / 2
+
+        def width_at(depth: float) -> float:
+            return actual_box.w * (1 - (1 - end_ratio) * depth / actual_box.h)
+
+        for index, stage in enumerate(stages):
+            top_depth = index * (slice_h + gap)
+            w_top = width_at(top_depth)
+            w_bot = width_at(top_depth + slice_h)
+            y = actual_box.y + top_depth
+            fill = self._composite_tone(stage, index)
+            color = stage.attrs.get("color", "lt1")
+            size = self._composite_label_size(stage, label_size)
+            if index == n - 1 and tip == "point":
+                self._emit_composite_shape(
+                    "triangle", center_x - w_top / 2, y, w_top, slice_h,
+                    fill, stage.text, color, size, flip_v=True,
+                )
+            else:
+                # trapezoid adj: corner inset relative to min(w, h); flipV
+                # turns the narrow edge downward. Flips don't mirror text.
+                inset = (w_top - w_bot) / 2
+                shortest = max(1.0, min(w_top, slice_h))
+                adj = max(0, min(50000, round(inset / shortest * 100000)))
+                self._emit_composite_shape(
+                    "trapezoid", center_x - w_top / 2, y, w_top, slice_h,
+                    fill, stage.text, color, size, flip_v=True, adjustments={"adj": adj},
+                )
+        self._record_block("funnel", actual_box, parent_kind, node.attrs)
+
+    def _resolve_process(self, node: Node, box: Box, parent_kind: str):
+        actual_box = self._box_for_node(node, box)
+        steps = self._composite_items(node, "step")
+        n = len(steps)
+        gap = self._unit(node.attrs.get("gap", "0.08in"), actual_box.w)
+        label_size = self._points(node.attrs.get("labelSize", "12pt"))
+        step_w = (actual_box.w - gap * (n - 1)) / n
+        if step_w <= 0:
+            raise ValueError("<process> gap leaves no room for steps")
+        for index, step in enumerate(steps):
+            x = actual_box.x + index * (step_w + gap)
+            preset = "homePlate" if index == 0 else "chevron"
+            self._emit_composite_shape(
+                preset, x, actual_box.y, step_w, actual_box.h,
+                self._composite_tone(step, index),
+                step.text,
+                step.attrs.get("color", "lt1"),
+                self._composite_label_size(step, label_size),
+            )
+        self._record_block("process", actual_box, parent_kind, node.attrs)
+
+    def _resolve_pyramid(self, node: Node, box: Box, parent_kind: str):
+        actual_box = self._box_for_node(node, box)
+        tiers = self._composite_items(node, "tier")
+        n = len(tiers)
+        gap = self._unit(node.attrs.get("gap", "0.06in"), actual_box.h)
+        label_size = self._points(node.attrs.get("labelSize", "13pt"))
+        tip = node.attrs.get("tip", "point")
+        if tip not in ("point", "flat"):
+            raise ValueError(f"Unsupported pyramid tip: {tip!r} (expected point|flat)")
+        tier_h = (actual_box.h - gap * (n - 1)) / n
+        if tier_h <= 0:
+            raise ValueError("<pyramid> gap leaves no room for tiers")
+
+        end_ratio = 0.0 if tip == "point" else 0.25
+        center_x = actual_box.x + actual_box.w / 2
+
+        def width_at(depth: float) -> float:
+            # depth measured from the apex (top of the box)
+            return actual_box.w * (end_ratio + (1 - end_ratio) * depth / actual_box.h)
+
+        for index, tier in enumerate(tiers):
+            top_depth = index * (tier_h + gap)
+            w_top = width_at(top_depth)
+            w_bot = width_at(top_depth + tier_h)
+            y = actual_box.y + top_depth
+            fill = self._composite_tone(tier, index)
+            color = tier.attrs.get("color", "lt1")
+            size = self._composite_label_size(tier, label_size)
+            if index == 0 and tip == "point":
+                self._emit_composite_shape(
+                    "triangle", center_x - w_bot / 2, y, w_bot, tier_h,
+                    fill, tier.text, color, size,
+                )
+            else:
+                inset = (w_bot - w_top) / 2
+                shortest = max(1.0, min(w_bot, tier_h))
+                adj = max(0, min(50000, round(inset / shortest * 100000)))
+                self._emit_composite_shape(
+                    "trapezoid", center_x - w_bot / 2, y, w_bot, tier_h,
+                    fill, tier.text, color, size, adjustments={"adj": adj},
+                )
+        self._record_block("pyramid", actual_box, parent_kind, node.attrs)
+
+    def _resolve_venn(self, node: Node, box: Box, parent_kind: str):
+        actual_box = self._box_for_node(node, box)
+        sets = self._composite_items(node, "set")
+        if len(sets) not in (2, 3):
+            raise ValueError("<venn> supports exactly 2 or 3 <set> children")
+        alpha = self._percent_thousandths(node.attrs.get("alpha", "55%"))
+        label_size = self._points(node.attrs.get("labelSize", "14pt"))
+        cx = actual_box.x + actual_box.w / 2
+        cy = actual_box.y + actual_box.h / 2
+
+        if len(sets) == 2:
+            radius = min(actual_box.h / 2, actual_box.w / 3.2)
+            offset = radius * 0.6
+            centers = [(cx - offset, cy), (cx + offset, cy)]
+        else:
+            radius = min(actual_box.w, actual_box.h) * 0.30
+            d = radius * 0.62
+            centers = [
+                (cx, cy - d),
+                (cx - d * 0.87, cy + d * 0.5),
+                (cx + d * 0.87, cy + d * 0.5),
+            ]
+
+        for index, (set_node, (sx, sy)) in enumerate(zip(sets, centers)):
+            self._emit_composite_shape(
+                "ellipse", sx - radius, sy - radius, radius * 2, radius * 2,
+                self._composite_tone(set_node, index),
+                None, "lt1", label_size, alpha=alpha,
+            )
+        # Labels go on top, pushed outward from the diagram center so they
+        # sit in each circle's exclusive region.
+        for index, (set_node, (sx, sy)) in enumerate(zip(sets, centers)):
+            if not set_node.text:
+                continue
+            dx, dy = sx - cx, sy - cy
+            length = max(1.0, (dx * dx + dy * dy) ** 0.5)
+            lx = sx + dx / length * radius * 0.45
+            ly = sy + dy / length * radius * 0.45
+            self._emit_composite_shape(
+                "rect", lx - radius * 0.6, ly - radius * 0.25, radius * 1.2, radius * 0.5,
+                "none",
+                set_node.text,
+                set_node.attrs.get("color", "lt1"),
+                self._composite_label_size(set_node, label_size),
+            )
+        self._record_block("venn", actual_box, parent_kind, node.attrs)
 
     def _resolve_table(self, node: Node, box: Box, parent_kind: str):
         actual_box = self._box_for_node(node, box)
@@ -1265,7 +1505,8 @@ class LayoutResolver:
     # Kinds that flex to absorb leftover vertical stack space. Text and rules
     # are content-sized; containers and media fill what remains.
     STACK_FLEX_KINDS = frozenset(
-        {"stack", "grid", "free", "chart", "table", "timeline", "image", "shape", "use"}
+        {"stack", "grid", "free", "chart", "table", "timeline", "image", "shape", "use",
+         "funnel", "process", "pyramid", "venn"}
     )
 
     # PowerPoint's default vertical text-box insets (tIns + bIns, 45720 each).
