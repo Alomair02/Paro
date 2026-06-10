@@ -50,6 +50,9 @@ class LayoutResolver:
     # Valid a:headEnd/a:tailEnd marker types for <line head=/tail=>.
     LINE_END_TYPES = frozenset({"none", "triangle", "stealth", "diamond", "oval", "arrow"})
 
+    # <run field=> DSL names -> a:fld type values.
+    RUN_FIELD_TYPES = {"slidenum": "slidenum", "slideNumber": "slidenum"}
+
     def __init__(
         self,
         theme_registry: ThemeRegistry | None = None,
@@ -1471,6 +1474,16 @@ class LayoutResolver:
 
             if run_node.attrs.get("link"):
                 run["link"] = run_node.attrs["link"]
+
+            if run_node.attrs.get("field"):
+                field = run_node.attrs["field"]
+                if field not in self.RUN_FIELD_TYPES:
+                    raise ValueError(
+                        f"Unknown run field {field!r}; expected one of {sorted(self.RUN_FIELD_TYPES)}"
+                    )
+                run["field"] = self.RUN_FIELD_TYPES[field]
+                # The literal is just a placeholder; PowerPoint re-renders it.
+                run["text"] = run_node.text or "1"
 
             size = run_node.attrs.get("size", text_parent.attrs.get("size"))
             if size:

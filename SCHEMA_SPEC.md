@@ -241,6 +241,7 @@ An inline span with its own formatting. **Use a `<run>` only for mixed formattin
 | `color` | token / hex | inherit | |
 | `font` | family | inherit | |
 | `link` | URL | none | Hyperlink |
+| `field` | `slidenum` | none | Emits an auto-updating `a:fld` (e.g. footer `<p>Page <run field="slidenum"/></p>`); the run's text is just the placeholder literal |
 
 Content: the text string.
 

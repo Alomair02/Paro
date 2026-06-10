@@ -1429,6 +1429,30 @@ class ShapeUnlockTests(unittest.TestCase):
         for effect in ("alphaModFix", "grayscl", "duotone"):
             self.assertNotIn(effect, slide_xml)
 
+    def test_run_field_emits_slidenum_fld(self):
+        slide_xml = self._slide_xml(
+            '<text x="1in" y="1in" w="2in" h="0.4in" size="8pt">'
+            "<p>Page <run field=\"slidenum\"/></p></text>"
+        )
+        tree = parse_xml(slide_xml)
+        fld = tree.find(f".//{qn('a', 'fld')}")
+        self.assertIsNotNone(fld)
+        self.assertEqual(fld.get("type"), "slidenum")
+        self.assertTrue(fld.get("id", "").startswith("{"))
+        self.assertIn("Page", slide_xml)  # literal run survives beside the field
+
+    def test_run_unknown_field_raises(self):
+        with self.assertRaises(ValueError):
+            parse_resolve(
+                """
+                <deck>
+                  <slide layout="blank" flow="free">
+                    <text x="1in" y="1in" w="2in" h="0.4in"><run field="pagecount"/></text>
+                  </slide>
+                </deck>
+                """
+            )
+
     def test_line_end_markers_emit_head_and_tail(self):
         slide_xml = self._slide_xml(
             '<line x1="1in" y1="1in" x2="3in" y2="2in" head="oval" tail="arrow"/>'

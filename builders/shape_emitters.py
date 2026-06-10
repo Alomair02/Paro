@@ -494,6 +494,7 @@ def _paragraph_from_data(
                 color=run_data.get("color", default_run_props.get("color")),
                 font=run_data.get("font"),
                 hyperlink_rid=hyperlink_rid,
+                field=run_data.get("field"),
             )
         )
 

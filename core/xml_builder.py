@@ -9,6 +9,8 @@ Description: Generic XML utilities and OOXML-specific builders.
 Pure functions — no side effects, no state.
 """
 
+import uuid
+
 from lxml import etree
 
 CANONICAL_XML_DECLARATION = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
@@ -271,12 +273,20 @@ def make_run(text: str,
              size_pt: float = None,
              color: str = None,
              font: str = None,
-             hyperlink_rid: str = None) -> etree._Element:
+             hyperlink_rid: str = None,
+             field: str = None) -> etree._Element:
     """
     Build an a:r element (text run).
     size_pt is in points; converted internally to hundredths of a point.
+    field turns the run into an a:fld of that type (e.g. "slidenum"); the
+    text becomes the placeholder literal PowerPoint replaces on render.
     """
-    run = etree.Element(qn("a", "r"))
+    if field:
+        run = etree.Element(qn("a", "fld"))
+        run.set("id", "{" + str(uuid.uuid5(uuid.NAMESPACE_URL, f"paro-field-{field}")).upper() + "}")
+        run.set("type", field)
+    else:
+        run = etree.Element(qn("a", "r"))
 
     rpr = etree.SubElement(run, qn("a", "rPr"))
     rpr.set("lang", "en-US")
