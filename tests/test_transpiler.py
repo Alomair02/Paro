@@ -20,6 +20,7 @@ from transpiler import (
     Validator,
     transpile_deck,
 )
+from transpiler.ast import Node
 from transpiler.registries import ChartStyleRegistry
 from transpiler.validator import TranspileValidationError
 from transpiler.pipeline import _inline_theme_map
@@ -1485,6 +1486,50 @@ class CompositeTests(unittest.TestCase):
                 '<venn x="1in" y="1in" w="5in" h="4in">'
                 "<set>A</set><set>B</set><set>C</set><set>D</set></venn>"
             )
+
+
+class GateBacklogTests(unittest.TestCase):
+    """The two authoring-cost gaps named by the P&L Trends gate check."""
+
+    def test_table_size_attr_sizes_every_cell(self):
+        deck = parse_resolve(
+            """
+            <deck><slide layout="blank" flow="free">
+              <table cols="2" size="9pt" x="1in" y="1in" w="6in" h="2in">
+                <row><cell>Funded income</cell><cell>2,012</cell></row>
+                <row><cell>Zakat</cell><cell>151</cell></row>
+              </table>
+            </slide></deck>
+            """
+        )
+        table = deck.slide_data[0]["shapes"][0]
+        runs = [
+            run
+            for row in table["rows"]
+            for cell in row["cells"]
+            for paragraph in cell["paragraphs"]
+            for run in paragraph["runs"]
+        ]
+        self.assertTrue(runs)
+        self.assertTrue(all(run.get("size_pt") == 9.0 for run in runs))
+
+    def test_bulleted_text_measures_wider_wrap_than_plain(self):
+        # marL shrinks the usable width, so the same long sentence must
+        # measure taller with a bullet than without.
+        sentence = (
+            "Net income for the first quarter grew thirty-six percent year on year"
+            " from operating income growth despite higher operating expenses."
+        )
+        resolver = LayoutResolver()
+        plain = Node("text", {"size": "10pt"}, [Node("p", {}, [], sentence)], None)
+        bulleted = Node(
+            "text", {"size": "10pt"}, [Node("p", {"bullet": "dash"}, [], sentence)], None
+        )
+        width = UnitConverter.to_emu("4in")
+        self.assertGreater(
+            resolver._intrinsic_text_height(bulleted, width),
+            resolver._intrinsic_text_height(plain, width),
+        )
 
 
 class ShapeUnlockTests(unittest.TestCase):

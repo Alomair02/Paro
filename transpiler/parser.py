@@ -111,6 +111,8 @@ ALLOWED_ATTRS = {
         "fill",
         "line",
         "lineWidth",
+        "size",
+        "role",
     }
     | GRID_PLACEMENT_ATTRS
     | GEOMETRY_ATTRS,

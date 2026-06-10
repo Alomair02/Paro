@@ -659,7 +659,13 @@ class LayoutResolver:
                     "line": {"color": line_color, "width": line_width},
                     "align": cell.attrs.get("align"),
                     "valign": cell.attrs.get("valign"),
-                    "paragraphs": self._paragraphs_from_cell(cell, color=color, bold=bold),
+                    "paragraphs": self._paragraphs_from_cell(
+                        cell,
+                        color=color,
+                        bold=bold,
+                        size=node.attrs.get("size"),
+                        role=node.attrs.get("role"),
+                    ),
                 }
                 row_cells.append(cell_data)
                 self._record_block("table_cell", cell_box, "table", cell.attrs, content=cell_data)
@@ -1577,11 +1583,19 @@ class LayoutResolver:
             line_spacing = node.attrs.get("lineSpacing", bundle.get("lineSpacing", 1.0))
             font = node.attrs.get("font") or self._timeline_font_family(role)
             text = para.text or "".join(run.text or "" for run in para.children) or "Ag"
+            # Bulleted paragraphs wrap inside marL — measuring at full width
+            # under-counts lines and the block collides with its neighbour.
+            usable_width = width
+            bullet = para.attrs.get("bullet", node.attrs.get("list"))
+            if bullet and bullet != "none":
+                indents = REFERENCE["text_defaults"]["level_indents"]
+                level = int(para.attrs.get("level", 0))
+                usable_width -= indents[min(max(level, 0), len(indents) - 1)]["marL"]
             measurement = self.text_measurer.measure(
                 text,
                 font,
                 size,
-                max(1, width),
+                max(1, usable_width),
                 bold=bool(bold),
                 line_spacing=float(line_spacing),
             )
@@ -1646,9 +1660,21 @@ class LayoutResolver:
             return [self._paragraph_from_node(Node("p", {}, [], node.text or ""), node)]
         return [self._paragraph_from_node(paragraph, node) for paragraph in paragraphs]
 
-    def _paragraphs_from_cell(self, node: Node, color: str | None = None, bold: bool = False) -> list[dict[str, Any]]:
+    def _paragraphs_from_cell(
+        self,
+        node: Node,
+        color: str | None = None,
+        bold: bool = False,
+        size: str | None = None,
+        role: str | None = None,
+    ) -> list[dict[str, Any]]:
         paragraph_nodes = [child for child in node.children if child.kind == "p"]
-        text_parent = Node("text", {"align": node.attrs.get("align", "")}, paragraph_nodes, node.text)
+        parent_attrs = {"align": node.attrs.get("align", "")}
+        if size:
+            parent_attrs["size"] = size
+        if role:
+            parent_attrs["role"] = role
+        text_parent = Node("text", parent_attrs, paragraph_nodes, node.text)
         paragraphs = self._paragraphs_from_text_node(text_parent)
         for paragraph in paragraphs:
             for run in paragraph.get("runs", []):

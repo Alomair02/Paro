@@ -303,6 +303,8 @@ Pulled into v1: "title + intro + table" is a top-five business slide and both au
 | `headerFill` | token / hex | `accent1` | Header row background |
 | `headerColor` | token / hex | `lt1` | Header row text color |
 | `fill`, `line`, `lineWidth` | token / hex | theme | Default cell fill / border color / border width |
+| `size` | unit (pt) | role default | Text size for every cell — the dense-financial-table control |
+| `role` | type-scale role | `body` | Type-scale role for cell text (explicit `size` wins) |
 | `w`, `h`, `x`, `y` | unit / `%` | from container | Geometry |
 
 Children: `<row>` elements; each `<row>` holds `<cell>` elements.

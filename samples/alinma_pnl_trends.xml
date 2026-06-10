@@ -17,20 +17,20 @@
     <grid cols="2" gap="0.35in" h="5.3in">
       <stack gap="0.1in">
         <text size="12pt" bold="true" color="dk1">Management Commentary</text>
-        <text size="10pt" color="dk1" lineSpacing="1.2" h="0.95in">
+        <text size="10pt" color="dk1" lineSpacing="1.2">
           <p bullet="dash">Net income for 1Q 2024 grew 36% YoY to SAR 1,315mn from 18% operating income growth despite 10% higher operating expenses YoY.</p>
           <p bullet="dash">1Q 2024 funded income increased by 16% YoY, and the non-funded income increased by 24% YoY.</p>
         </text>
-        <table cols="6" header="true" headerFill="lt2" headerColor="dk1" colWidths="27%,15.5%,15.5%,13%,15.5%,13.5%">
-          <row><cell><p role="caption">SAR (mn)</p></cell><cell align="r"><p role="caption">1Q&#160;2024</p></cell><cell align="r"><p role="caption">4Q&#160;2023</p></cell><cell align="r"><p role="caption">&#916;%</p></cell><cell align="r"><p role="caption">1Q&#160;2023</p></cell><cell align="r"><p role="caption">&#916;%</p></cell></row>
-          <row><cell><p role="caption">Funded income</p></cell><cell align="r"><p role="caption">2,012</p></cell><cell align="r"><p role="caption">2,054</p></cell><cell align="r"><p role="caption">-2%</p></cell><cell align="r"><p role="caption">1,735</p></cell><cell align="r"><p role="caption">+16%</p></cell></row>
-          <row><cell><p role="caption">Non-funded income</p></cell><cell align="r"><p role="caption">553</p></cell><cell align="r"><p role="caption">515</p></cell><cell align="r"><p role="caption">+7%</p></cell><cell align="r"><p role="caption">445</p></cell><cell align="r"><p role="caption">+24%</p></cell></row>
-          <row><cell bold="true"><p role="caption">Total operating income</p></cell><cell align="r" bold="true"><p role="caption">2,565</p></cell><cell align="r"><p role="caption">2,569</p></cell><cell align="r"><p role="caption">-0%</p></cell><cell align="r"><p role="caption">2,179</p></cell><cell align="r"><p role="caption">+18%</p></cell></row>
-          <row><cell><p role="caption">Operating expenses</p></cell><cell align="r"><p role="caption">834</p></cell><cell align="r"><p role="caption">774</p></cell><cell align="r"><p role="caption">+8%</p></cell><cell align="r"><p role="caption">758</p></cell><cell align="r"><p role="caption">+10%</p></cell></row>
-          <row><cell><p role="caption">Impairments</p></cell><cell align="r"><p role="caption">264</p></cell><cell align="r"><p role="caption">324</p></cell><cell align="r"><p role="caption">-18%</p></cell><cell align="r"><p role="caption">343</p></cell><cell align="r"><p role="caption">-23%</p></cell></row>
-          <row><cell bold="true"><p role="caption">Net operating income</p></cell><cell align="r" bold="true"><p role="caption">1,467</p></cell><cell align="r"><p role="caption">1,471</p></cell><cell align="r"><p role="caption">-0%</p></cell><cell align="r"><p role="caption">1,079</p></cell><cell align="r"><p role="caption">+36%</p></cell></row>
-          <row><cell><p role="caption">Zakat</p></cell><cell align="r"><p role="caption">151</p></cell><cell align="r"><p role="caption">152</p></cell><cell align="r"><p role="caption">-0%</p></cell><cell align="r"><p role="caption">111</p></cell><cell align="r"><p role="caption">+36%</p></cell></row>
-          <row><cell bold="true"><p role="caption">Net income</p></cell><cell align="r" bold="true"><p role="caption">1,315</p></cell><cell align="r"><p role="caption">1,320</p></cell><cell align="r"><p role="caption">-0%</p></cell><cell align="r"><p role="caption">970</p></cell><cell align="r"><p role="caption">+36%</p></cell></row>
+        <table cols="6" size="9pt" header="true" headerFill="lt2" headerColor="dk1" colWidths="27%,15.5%,15.5%,13%,15.5%,13.5%">
+          <row><cell>SAR (mn)</cell><cell align="r">1Q&#160;2024</cell><cell align="r">4Q&#160;2023</cell><cell align="r">&#916;%</cell><cell align="r">1Q&#160;2023</cell><cell align="r">&#916;%</cell></row>
+          <row><cell>Funded income</cell><cell align="r">2,012</cell><cell align="r">2,054</cell><cell align="r">-2%</cell><cell align="r">1,735</cell><cell align="r">+16%</cell></row>
+          <row><cell>Non-funded income</cell><cell align="r">553</cell><cell align="r">515</cell><cell align="r">+7%</cell><cell align="r">445</cell><cell align="r">+24%</cell></row>
+          <row><cell bold="true">Total operating income</cell><cell align="r" bold="true">2,565</cell><cell align="r">2,569</cell><cell align="r">-0%</cell><cell align="r">2,179</cell><cell align="r">+18%</cell></row>
+          <row><cell>Operating expenses</cell><cell align="r">834</cell><cell align="r">774</cell><cell align="r">+8%</cell><cell align="r">758</cell><cell align="r">+10%</cell></row>
+          <row><cell>Impairments</cell><cell align="r">264</cell><cell align="r">324</cell><cell align="r">-18%</cell><cell align="r">343</cell><cell align="r">-23%</cell></row>
+          <row><cell bold="true">Net operating income</cell><cell align="r" bold="true">1,467</cell><cell align="r">1,471</cell><cell align="r">-0%</cell><cell align="r">1,079</cell><cell align="r">+36%</cell></row>
+          <row><cell>Zakat</cell><cell align="r">151</cell><cell align="r">152</cell><cell align="r">-0%</cell><cell align="r">111</cell><cell align="r">+36%</cell></row>
+          <row><cell bold="true">Net income</cell><cell align="r" bold="true">1,315</cell><cell align="r">1,320</cell><cell align="r">-0%</cell><cell align="r">970</cell><cell align="r">+36%</cell></row>
         </table>
       </stack>
 
