@@ -26,9 +26,14 @@ from agent.prompt import PROJECT_ROOT, build_system_prompt
 from agent.tools import mcp_server
 
 
-def make_options(max_turns: int = 40) -> ClaudeAgentOptions:
+def make_options(max_turns: int = 40, profile_dir: str | None = None) -> ClaudeAgentOptions:
+    system_prompt = build_system_prompt()
+    if profile_dir:
+        from agent.profile import load_profile, profile_prompt
+
+        system_prompt += "\n\n" + profile_prompt(load_profile(profile_dir), profile_dir)
     return ClaudeAgentOptions(
-        system_prompt=build_system_prompt(),
+        system_prompt=system_prompt,
         cwd=str(PROJECT_ROOT),
         mcp_servers={"paro": mcp_server()},
         allowed_tools=[
@@ -59,14 +64,20 @@ def make_prompt(brief: str, out_path: str, theme_pptx: str | None) -> str:
     return "\n".join(parts)
 
 
-async def run(brief: str, out_path: str, theme_pptx: str | None, max_turns: int) -> int:
+async def run(
+    brief: str,
+    out_path: str,
+    theme_pptx: str | None,
+    max_turns: int,
+    profile_dir: str | None = None,
+) -> int:
     # NB: don't return from inside the async for — closing the SDK's message
     # generator mid-iteration raises "aclose(): asynchronous generator is
     # already running" on teardown. Drain it, then return.
     exit_code = 0
     async for message in query(
         prompt=make_prompt(brief, out_path, theme_pptx),
-        options=make_options(max_turns),
+        options=make_options(max_turns, profile_dir),
     ):
         if isinstance(message, AssistantMessage):
             for block in message.content:
@@ -88,6 +99,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--out", default="out/agent_deck.xml", help="deck XML path the agent writes")
     parser.add_argument("--theme", help="ingest theme from this .pptx/.potx template")
     parser.add_argument("--max-turns", type=int, default=40)
+    parser.add_argument("--profile", help="design profile directory (see agent.profile)")
     args = parser.parse_args(argv)
     Path(args.out).parent.mkdir(parents=True, exist_ok=True)
-    return asyncio.run(run(args.brief, args.out, args.theme, args.max_turns))
+    return asyncio.run(run(args.brief, args.out, args.theme, args.max_turns, args.profile))

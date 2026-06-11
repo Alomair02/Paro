@@ -59,6 +59,59 @@ class AgentPlumbingTests(unittest.TestCase):
         self.assertIn("mcp__paro__paro_build", options.allowed_tools)
         self.assertNotIn("Bash", options.allowed_tools)
 
+    def test_profile_defaults_load_and_merge(self):
+        from agent.profile import init_profile, load_profile
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            directory = Path(tmpdir) / "acme"
+            init_profile(directory)
+            (directory / "profile.json").write_text(
+                '{"audience": "IB analysts", "diagram_density": "dense",'
+                ' "theme": {"source": "template", "template_pptx": "corp.pptx"},'
+                ' "notes": ["always waterfall for P&L"]}'
+            )
+            profile = load_profile(directory)
+        self.assertEqual(profile["audience"], "IB analysts")
+        self.assertEqual(profile["diagram_density"], "dense")
+        # merged theme keeps default theme_name
+        self.assertEqual(profile["theme"]["theme_name"], "ingested")
+        self.assertEqual(profile["formality"], "corporate")  # default survives
+
+    def test_profile_invalid_enum_raises_clearly(self):
+        from agent.profile import ProfileError, load_profile
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            directory = Path(tmpdir)
+            (directory / "profile.json").write_text('{"formality": "baroque"}')
+            with self.assertRaises(ProfileError):
+                load_profile(directory)
+
+    def test_profile_prompt_carries_dials_theme_and_writeback(self):
+        from agent.profile import load_profile, profile_prompt
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            directory = Path(tmpdir)
+            (directory / "profile.json").write_text(
+                '{"chart_complexity": "rich",'
+                ' "theme": {"source": "template", "template_pptx": "corp.pptx"},'
+                ' "notes": ["never clip-art icons"]}'
+            )
+            prompt = profile_prompt(load_profile(directory), directory)
+        self.assertIn("rich", prompt)
+        self.assertIn('theme_pptx="corp.pptx"', prompt)
+        self.assertIn("never clip-art icons", prompt)
+        self.assertIn("append a short", prompt)  # write-back instruction
+
+    def test_runner_options_include_profile_section(self):
+        from agent.profile import init_profile
+        from agent.runner import make_options
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            directory = Path(tmpdir) / "p"
+            init_profile(directory)
+            options = make_options(profile_dir=str(directory))
+        self.assertIn("Design profile", options.system_prompt)
+
 
 if __name__ == "__main__":
     unittest.main()

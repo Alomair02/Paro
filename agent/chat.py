@@ -57,12 +57,14 @@ async def _drain(client: ClaudeSDKClient):
             print(f"\n--- turn done{cost} ---")
 
 
-async def chat(theme: str | None, out_dir: str, max_turns: int) -> None:
+async def chat(theme: str | None, out_dir: str, max_turns: int, profile_dir: str | None) -> None:
     Path(out_dir).mkdir(parents=True, exist_ok=True)
-    options = make_options(max_turns)
+    options = make_options(max_turns, profile_dir)
     options.system_prompt += "\n\n# Session\n" + _session_preamble(theme, out_dir)
 
     print(__doc__)
+    if profile_dir:
+        print(f"[profile: {profile_dir}]")
     if theme:
         print(f"[session theme: {theme}]")
 
@@ -95,8 +97,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--theme", help="template .pptx for the whole session")
     parser.add_argument("--out-dir", default="out/chat", help="where the agent writes decks")
     parser.add_argument("--max-turns", type=int, default=60)
+    parser.add_argument("--profile", help="design profile directory (see agent.profile)")
     args = parser.parse_args(argv)
-    asyncio.run(chat(args.theme, args.out_dir, args.max_turns))
+    asyncio.run(chat(args.theme, args.out_dir, args.max_turns, args.profile))
     return 0
 
 

@@ -27,8 +27,9 @@ don't remember.
 6. Finish with a one-paragraph summary: what you built, which warnings you judged
    acceptable and why.
 
-Never edit files outside the deck you were asked to produce. Never claim a warning is
-fixed without rebuilding.
+Never edit files outside the deck you were asked to produce — the one exception is the
+session's profile.json when recording a durable user preference. Never claim a warning
+is fixed without rebuilding.
 """
 
 
