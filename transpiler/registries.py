@@ -6,6 +6,7 @@ from copy import deepcopy
 
 from builders.common import REFERENCE
 from builders.layout_builder import LAYOUT_DEFINITIONS
+from transpiler.house_styles import HOUSE_STYLES
 
 TIMELINE_FINISHES = {
     "flat": {
@@ -224,6 +225,10 @@ class ThemeRegistry:
             "paro": deepcopy(base),
             "Paro": deepcopy(base),
         }
+        # House styles: curated native themes for template-less decks.
+        # Injected themes (ingestion, inline) may override them by name.
+        for style_name, style in HOUSE_STYLES.items():
+            self._themes[style_name] = deepcopy(style)
         if themes:
             for name, theme in themes.items():
                 self._themes[name] = self._with_default_theme_data(theme, name)

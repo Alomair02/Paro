@@ -1,0 +1,44 @@
+<deck theme="boardroom" size="16:9">
+  <!-- House-style card: swap theme= to boardroom|academic|ledger|chalk to
+       audition each native style. Same content, four voices. -->
+  <slide layout="blank" flow="stack" pad="0.5in" gap="0.12in">
+    <text role="title" color="dk1">Riverside Analytics</text>
+    <line color="lt2" width="1.5pt"/>
+    <text role="subheading" color="dk2" h="0.6in">Quarterly performance review — Q2 2026</text>
+
+    <grid cols="3" gap="0.2in" h="1.6in">
+      <stack fill="lt2" pad="0.16in" justify="ctr" radius="0.06in">
+        <text role="caption" align="ctr" color="dk2">REVENUE</text>
+        <text role="heading" align="ctr" color="accent1">$48.2M</text>
+        <text role="caption" align="ctr" color="dk2">+12% YoY</text>
+      </stack>
+      <stack fill="lt2" pad="0.16in" justify="ctr" radius="0.06in">
+        <text role="caption" align="ctr" color="dk2">GROSS MARGIN</text>
+        <text role="heading" align="ctr" color="accent2">61.4%</text>
+        <text role="caption" align="ctr" color="dk2">+180 bps</text>
+      </stack>
+      <stack fill="lt2" pad="0.16in" justify="ctr" radius="0.06in">
+        <text role="caption" align="ctr" color="dk2">NET RETENTION</text>
+        <text role="heading" align="ctr" color="accent3">117%</text>
+        <text role="caption" align="ctr" color="dk2">enterprise cohort</text>
+      </stack>
+    </grid>
+
+    <grid cols="2" gap="0.3in">
+      <chart type="column" title="Revenue by quarter ($M)">
+        <categories>Q3'25, Q4'25, Q1'26, Q2'26</categories>
+        <series name="Revenue"><point value="41.0"/><point value="43.5"/><point value="45.1"/><point value="48.2"/></series>
+      </chart>
+      <stack gap="0.1in">
+        <text role="heading" color="dk1">What moved</text>
+        <text role="body" color="dk1">Enterprise expansion carried the quarter; self-serve held flat while pricing changes bedded in.</text>
+        <text role="bodySmall" color="dk2">Churn concentrated in the SMB tier — the segment review on the next page covers the response plan.</text>
+      </stack>
+    </grid>
+
+    <stack dir="h" anchor="bottom" h="0.26in" pad="0.04in">
+      <text size="8pt" color="dk2">RIVERSIDE ANALYTICS — CONFIDENTIAL</text>
+      <text size="8pt" color="dk2" align="r"><p>Page <run field="slidenum"/></p></text>
+    </stack>
+  </slide>
+</deck>

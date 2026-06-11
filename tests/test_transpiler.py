@@ -1488,6 +1488,49 @@ class CompositeTests(unittest.TestCase):
             )
 
 
+class HouseStyleTests(unittest.TestCase):
+    def test_house_styles_registered_complete_and_distinct(self):
+        from builders.common import REFERENCE
+        from transpiler.house_styles import HOUSE_STYLES
+        from transpiler.text_metrics import is_supported_font
+
+        registry = ThemeRegistry()
+        slots = set(REFERENCE["color_scheme_slots"]["order"])
+        roles = set(REFERENCE["default_theme"]["typeScale"])
+        accents = set()
+        for name in ("boardroom", "academic", "ledger", "chalk"):
+            theme = registry.get(name)
+            self.assertEqual(set(theme["colors"]), slots)
+            self.assertEqual(set(theme["typeScale"]), roles)
+            for font in theme["fonts"].values():
+                self.assertTrue(is_supported_font(font), font)
+            accents.add(theme["colors"]["accent1"])
+        self.assertEqual(len(accents), 4)  # four distinct voices
+        self.assertEqual(set(HOUSE_STYLES), {"boardroom", "academic", "ledger", "chalk"})
+
+    def test_heading_roles_emit_major_font_reference(self):
+        deck = parse_resolve(
+            """
+            <deck theme="academic"><slide layout="blank" flow="stack">
+              <text role="title">Serif Title</text>
+              <text role="body">Sans body</text>
+            </slide></deck>
+            """
+        )
+        shapes = deck.slide_data[0]["shapes"]
+        title_run = shapes[0]["paragraphs"][0]["runs"][0]
+        body_run = shapes[1]["paragraphs"][0]["runs"][0]
+        self.assertEqual(title_run.get("font"), "+mj-lt")
+        self.assertNotIn("font", body_run)
+        # explicit font still wins over the role's major-font reference
+        deck = parse_resolve(
+            '<deck><slide layout="blank" flow="stack">'
+            '<text role="title" font="Verdana">T</text></slide></deck>'
+        )
+        run = deck.slide_data[0]["shapes"][0]["paragraphs"][0]["runs"][0]
+        self.assertEqual(run["font"], "Verdana")
+
+
 class MixedRunWhitespaceTests(unittest.TestCase):
     """Found live by the authoring agent: '<run bold>renewal</run> by Q3'
     rendered as 'renewalby Q3' — boundary spaces at run joints were

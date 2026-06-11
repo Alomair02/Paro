@@ -148,6 +148,23 @@ Each pair of `.xml` + rendered images is a few-shot exemplar. Study the one near
 | `plsfix_funnel.xml` | Funnel composite + absolutely-positioned annotation column (when `free` is the right call) |
 | `composites_showcase.xml` | All four diagram composites, default tones |
 
+## House styles (no template? still designed)
+
+When the user has no corporate template, pick a house style with
+`<deck theme="...">` (or the profile's `theme.house_style`) instead of authoring
+colors ad hoc:
+
+| Style | Voice | Reach for it when |
+|---|---|---|
+| `boardroom` | ink navy, confident blue, cool panels, Calibri | business default: reviews, proposals, ops |
+| `academic` | warm paper, Georgia headings, burgundy/botanical | lectures, defenses, papers, seminars |
+| `ledger` | near-black, banker green, dense small type, Arial | finance/IB: comps, dashboards, data-heavy |
+| `chalk` | off-white, one electric blue accent, oversized titles | startups, product, anything modern-minimal |
+
+Roles carry the style's fonts automatically — `title`/`heading` set in the theme's
+heading (major) font, everything else in the body font. Don't fight a style's type
+scale with explicit sizes unless replicating.
+
 ## Theme ingestion
 
 A user-supplied `.pptx`/`.potx` template is ground truth. `--theme` (or

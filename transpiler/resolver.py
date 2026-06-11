@@ -1696,6 +1696,7 @@ class LayoutResolver:
             text_parent,
             role_bundle,
             self._should_emit_role_size(role_bundle, text_parent, level),
+            role=role,
         )
         paragraph_data = {
             "text": paragraph.text,
@@ -1708,12 +1709,17 @@ class LayoutResolver:
         self._apply_paragraph_spacing(paragraph_data, text_parent, role_bundle)
         return paragraph_data
 
+    # Roles set in the theme's heading (major) font. Everything else takes
+    # the body (minor) font that text boxes inherit by default.
+    HEADING_FONT_ROLES = frozenset({"title", "heading"})
+
     def _runs_from_paragraph(
         self,
         paragraph: Node,
         text_parent: Node,
         role_bundle: dict[str, Any],
         emit_role_size: bool,
+        role: str | None = None,
     ) -> list[dict[str, Any]]:
         run_nodes = [child for child in paragraph.children if child.kind == "run"]
         if not run_nodes:
@@ -1738,6 +1744,10 @@ class LayoutResolver:
                 value = run_node.attrs.get(attr, text_parent.attrs.get(attr))
                 if value:
                     run[attr] = value
+            if "font" not in run and role in self.HEADING_FONT_ROLES:
+                # Text boxes inherit the minor (body) font; heading roles must
+                # reference the theme's major font or it never renders at all.
+                run["font"] = "+mj-lt"
 
             if run_node.attrs.get("link"):
                 run["link"] = run_node.attrs["link"]
