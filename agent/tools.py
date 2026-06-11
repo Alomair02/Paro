@@ -52,5 +52,24 @@ async def paro_build(args: dict):
     return {"content": [{"type": "text", "text": text}]}
 
 
+@tool(
+    "read_source",
+    "Read user-supplied source material (xlsx, docx, pdf, csv, txt, md) as text; "
+    "spreadsheet rows and document tables come back as pipe-delimited rows you can "
+    "lift into <chart> series or <table> cells. Pass sheet to pick one xlsx sheet.",
+    {"path": str, "sheet": str},
+)
+async def read_source_tool(args: dict):
+    from agent.sources import SourceReadError, read_source
+
+    try:
+        text = read_source(str(args["path"]), args.get("sheet"))
+    except SourceReadError as exc:
+        text = f"read_source FAILED: {exc}"
+    return {"content": [{"type": "text", "text": text}]}
+
+
 def mcp_server():
-    return create_sdk_mcp_server(name="paro", version="1.0.0", tools=[paro_build])
+    return create_sdk_mcp_server(
+        name="paro", version="1.0.0", tools=[paro_build, read_source_tool]
+    )

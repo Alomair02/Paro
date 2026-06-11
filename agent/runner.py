@@ -43,6 +43,7 @@ def make_options(max_turns: int = 40, profile_dir: str | None = None) -> ClaudeA
             "Glob",
             "Grep",
             "mcp__paro__paro_build",
+            "mcp__paro__read_source",
         ],
         permission_mode="acceptEdits",
         max_turns=max_turns,

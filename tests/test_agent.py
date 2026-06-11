@@ -102,6 +102,58 @@ class AgentPlumbingTests(unittest.TestCase):
         self.assertIn("never clip-art icons", prompt)
         self.assertIn("append a short", prompt)  # write-back instruction
 
+    def test_read_source_xlsx_rows_and_sheets(self):
+        from openpyxl import Workbook
+
+        from agent.sources import read_source
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            book = Workbook()
+            ws = book.active
+            ws.title = "Revenue"
+            ws.append(["Quarter", "Revenue"])
+            ws.append(["Q1'26", 45.1])
+            ws.append(["Q2'26", 48.2])
+            path = Path(tmpdir) / "fin.xlsx"
+            book.save(path)
+            text = read_source(path)
+        self.assertIn("sheets: Revenue", text)
+        self.assertIn("| Q2'26 | 48.2 |", text)
+
+    def test_read_source_docx_paragraphs_and_tables(self):
+        import zipfile
+
+        from agent.sources import read_source
+
+        document = (
+            '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+            "<w:body>"
+            "<w:p><w:r><w:t>Executive summary.</w:t></w:r></w:p>"
+            "<w:tbl><w:tr>"
+            "<w:tc><w:p><w:r><w:t>KPI</w:t></w:r></w:p></w:tc>"
+            "<w:tc><w:p><w:r><w:t>96.4%</w:t></w:r></w:p></w:tc>"
+            "</w:tr></w:tbl>"
+            "</w:body></w:document>"
+        )
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "memo.docx"
+            with zipfile.ZipFile(path, "w") as z:
+                z.writestr("word/document.xml", document)
+            text = read_source(path)
+        self.assertIn("Executive summary.", text)
+        self.assertIn("| KPI | 96.4% |", text)
+
+    def test_read_source_unsupported_and_missing(self):
+        from agent.sources import SourceReadError, read_source
+
+        with self.assertRaises(SourceReadError):
+            read_source("/does/not/exist.xlsx")
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "deck.pptx"
+            path.write_text("x")
+            with self.assertRaises(SourceReadError):
+                read_source(path)
+
     def test_runner_options_include_profile_section(self):
         from agent.profile import init_profile
         from agent.runner import make_options
