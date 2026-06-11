@@ -1,0 +1,70 @@
+<deck theme="ingested">
+
+  <!-- 1 · Cover -->
+  <slide layout="title">
+    <text placeholder="ctrTitle">Q2 2026 Quarterly Review</text>
+    <text placeholder="subTitle">
+      <p>Financial performance — P&amp;L and segment revenue</p>
+      <p>Bank Steering Committee · June 2026</p>
+    </text>
+  </slide>
+
+  <!-- 2 · P&L -->
+  <slide layout="titleOnly" flow="stack" gap="0.25in">
+    <text placeholder="title">Q2 2026 P&amp;L: net income of SAR 1,402mn, up 18.4% year on year</text>
+    <grid cols="24" gap="0.3in" h="3.9in">
+      <table cols="6" header="true" colspan="16" colWidths="28%,15%,15%,13%,15%,14%" h="3.6in">
+        <row><cell>SAR mn</cell><cell align="r">Q2 2026</cell><cell align="r">Q1 2026</cell><cell align="r">QoQ %</cell><cell align="r">Q2 2025</cell><cell align="r">YoY %</cell></row>
+        <row><cell>Operating income</cell><cell align="r">2,710</cell><cell align="r">2,565</cell><cell align="r">+5.7%</cell><cell align="r">2,402</cell><cell align="r">+12.8%</cell></row>
+        <row><cell>Operating expenses</cell><cell align="r">858</cell><cell align="r">834</cell><cell align="r">+2.9%</cell><cell align="r">801</cell><cell align="r">+7.1%</cell></row>
+        <row><cell>Impairments</cell><cell align="r">241</cell><cell align="r">264</cell><cell align="r">-8.7%</cell><cell align="r">290</cell><cell align="r">-16.9%</cell></row>
+        <row><cell bold="true">Net income</cell><cell align="r" bold="true">1,402</cell><cell align="r" bold="true">1,315</cell><cell align="r" bold="true">+6.6%</cell><cell align="r" bold="true">1,184</cell><cell align="r" bold="true">+18.4%</cell></row>
+      </table>
+      <stack colspan="8" gap="0.16in">
+        <stack line="accent2" lineWidth="1pt" pad="0.16in" justify="ctr" gap="0.04in">
+          <text align="ctr" size="10pt" bold="true">Net income, YoY</text>
+          <text align="ctr" size="24pt" bold="true" color="accent2">+18.4%</text>
+          <text align="ctr" size="10pt">SAR 1,184mn → 1,402mn</text>
+        </stack>
+        <stack fill="lt2" radius="6pt" pad="0.16in" gap="0.05in">
+          <text size="10pt" bold="true">Positive jaws, falling cost of risk</text>
+          <text size="10pt">Operating income grew 12.8% YoY against 7.1% expense growth, while impairments fell 16.9% — together lifting net income 18.4%.</text>
+        </stack>
+      </stack>
+    </grid>
+    <text role="caption" color="dk2">Source: data/q2_financials.xlsx, P&amp;L sheet. Figures in SAR mn; percentages as reported.</text>
+  </slide>
+
+  <!-- 3 · Segment revenue -->
+  <slide layout="titleOnly" flow="stack" gap="0.25in">
+    <text placeholder="title">Segment revenue: broad-based growth, led by Brokerage &amp; wealth at +21.0% YoY</text>
+    <grid cols="24" gap="0.3in" h="4.2in">
+      <chart type="column" title="Q2 2026 revenue by segment (SAR mn)" dataLabels="value" colspan="16">
+        <categories>Retail banking, Corporate banking, Treasury, Brokerage &amp; wealth</categories>
+        <series name="Q2 2026 revenue"><point value="1180"/><point value="890"/><point value="420"/><point value="220"/></series>
+      </chart>
+      <stack colspan="8" gap="0.12in">
+        <text size="10pt" bold="true">YoY revenue growth</text>
+        <stack dir="h" line="lt2" lineWidth="1pt" pad="0.1in">
+          <text size="10pt">Retail banking</text>
+          <text size="14pt" bold="true" color="accent2" align="r">+15.2%</text>
+        </stack>
+        <stack dir="h" line="lt2" lineWidth="1pt" pad="0.1in">
+          <text size="10pt">Corporate banking</text>
+          <text size="14pt" bold="true" color="accent2" align="r">+11.4%</text>
+        </stack>
+        <stack dir="h" line="lt2" lineWidth="1pt" pad="0.1in">
+          <text size="10pt">Treasury</text>
+          <text size="14pt" bold="true" color="accent2" align="r">+8.1%</text>
+        </stack>
+        <stack dir="h" line="lt2" lineWidth="1pt" pad="0.1in">
+          <text size="10pt">Brokerage &amp; wealth</text>
+          <text size="14pt" bold="true" color="accent2" align="r">+21.0%</text>
+        </stack>
+        <text size="10pt" color="dk2">Every segment grew YoY; Retail contributes 44% of total Q2 revenue (SAR 2,710mn).</text>
+      </stack>
+    </grid>
+    <text role="caption" color="dk2">Source: data/q2_financials.xlsx, Segments sheet. Revenue in SAR mn; growth YoY vs Q2 2025.</text>
+  </slide>
+
+</deck>
